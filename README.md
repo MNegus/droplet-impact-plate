@@ -1,7 +1,7 @@
 # plate-impact
 DNS code for droplet impact onto moving plates using [Basilisk](<http://basilisk.fr/>). 
 
-Contributors: [Radu Cimpeanu](<https://warwick.ac.uk/fac/sci/maths/people/staff/cimpeanu/>), [Matthew Moore](<https://www.maths.ox.ac.uk/people/matthew.moore>), [James Oliver](<https://www.maths.ox.ac.uk/people/james.oliver>), [Ben Fudge & Alfonso Castrejón-Pita](<http://www2.eng.ox.ac.uk/fluidlab/members>)
+<!-- Contributors: [Radu Cimpeanu](<https://warwick.ac.uk/fac/sci/maths/people/staff/cimpeanu/>), [Matthew Moore](<https://www.maths.ox.ac.uk/people/matthew.moore>), [James Oliver](<https://www.maths.ox.ac.uk/people/james.oliver>), [Ben Fudge & Alfonso Castrejón-Pita](<http://www2.eng.ox.ac.uk/fluidlab/members>) -->
 
 ## Preamble
 * [Basilisk](<http://basilisk.fr/>) is an open source volume of fluid (VOF) package that can be used to solve the incompressible Navier-Stokes equations
