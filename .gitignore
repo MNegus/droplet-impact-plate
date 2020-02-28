@@ -1,0 +1,8 @@
+# .gitignore for plate-impact repository
+
+# Ignores test files that are outputted in Basilisk simulations
+*.s 
+*.s.d 
+*.tst 
+*.deps
+*.tests 
