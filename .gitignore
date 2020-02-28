@@ -5,4 +5,7 @@
 *.s.d 
 *.tst 
 *.deps
-*.tests 
+*.tests
+
+# Nohup files
+nohup.out 
