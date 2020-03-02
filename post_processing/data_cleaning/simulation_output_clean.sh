@@ -14,13 +14,14 @@
 # Name of the directory where the raw data is stored
 RAWDATADIRECTORY=$1
 coderun=$2
+CLEANEDDIRECTORY=$3
 
 DATADIRECTORY=$RAWDATADIRECTORY/$coderun
 
 echo Cleaning $coderun
 
 # Creates the directories to store cleaned data
-CLEANEDDIRECTORY=/scratch/Plate_validation_data/cleaned_data/$coderun
+# CLEANEDDIRECTORY=/scratch/Plate_validation_data/cleaned_data/$coderun
 mkdir $CLEANEDDIRECTORY
 mkdir $CLEANEDDIRECTORY/plate_outputs
 
