@@ -11,9 +11,9 @@ const double DROP_VEL = -1.0; // Initial velocity of the droplet
 const double PLATE_VEL = -0.1; // Constant velocity of the plate
 const double DROP_RADIUS = 1.0; // Radius of droplet
 const double DROP_CENTRE = 2.125; // Initial centre position of droplet
-const double PLATE_TOP = 1.0; // Initial top of plate (vertical direction)
+const double INITIAL_PLATE_TOP = 1.0; // Initial top of plate 
 const double PLATE_WIDTH = 3.0; // Width of plate (horizontal direction)
-const double PLATE_THICKNESS = 0.125; // Thickness (vertical direction)
+const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
 
 /* Computational constants */
 const int MINLEVEL = 4; // Minimum refinement level 
