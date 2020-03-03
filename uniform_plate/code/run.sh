@@ -2,8 +2,7 @@
 
 export OMP_NUM_THREADS=8
 
-# for PLATE_VEL in 0.2 0.3 0.4 0.5
-for PLATE_VEL in 0.2
+for PLATE_VEL in 0.2 0.3 0.4 0.5
 do
     # Deletes the previous directory and test files
     rm -r uniform_plate
