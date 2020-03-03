@@ -1,6 +1,14 @@
 /* uniform_plate.c
     An axisymmetric droplet falling towards an impermeable plate which can move
-    in the vertical direction at a prescribed velocity.
+    in the vertical direction at a prescribed velocity, PLATE_VEL, which is 
+    assumed to be negative
+
+    We run the simulation until the turnover point reaches the droplet radius. 
+    According to Wagner theory, for DROP_VEL = 1 and DROP_RADIUS = 1, the
+    turnover point is at
+        r = d(t) = sqrt(3 * (1 + PLATE_VEL) * (t - IMPACT_TIME))
+    where IMPACT_TIME is the time at which the droplet hits the plate.
+    So for d = DROP_RADIUS = 1 when t = IMPACT_TIME + 1 / (3 * (1 + PLATE_VEL))
 */
 
 #include "parameters.h" // Include all defined parameters
@@ -16,6 +24,8 @@
 double MIN_CELL_SIZE; // Size of the smallest cell
 double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
 double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
+double IMPACT_TIME; // Theoretical time of impact
+double MAX_TIME; // Maximum time to run the simulation for
 
 /* Boundary conditions */
 // Outflow through boundaries far from impact
@@ -60,6 +70,12 @@ int main() {
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
     DROP_REFINED_WIDTH = 10 * MIN_CELL_SIZE; // Refined region around droplet
+    IMPACT_TIME = (DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
+        / (PLATE_VEL - DROP_VEL);
+
+    // Maximum time is shortly after the Wagner theory prediction of the 
+    // turnover point reaching the radius of the droplet
+    MAX_TIME = 1.5 * (IMPACT_TIME + 1 / (3 * (1 + PLATE_VEL))); 
 
     /* Run the simulation */
     run();
@@ -209,8 +225,12 @@ event gfs_output (t += 0.01) {
 event images (t += 0.005) {
 /* Produces movies and images using bview */
 
+    // Creates a string with the time to put on the plots
+    char time_str[80];
+    sprintf(time_str, "t = %g\n", t);
+
     // Set up bview box
-    view (width = 512, height = 512, fov = 20, ty = -0.5, \
+    view (width = 512, height = 512, fov = 30, ty = -0.5, \
         quat = {0, 0, -0.707, 0.707});
 
     // Movie of the volume fraction of the droplet
@@ -225,10 +245,11 @@ event images (t += 0.005) {
         draw_vof("plate", lw = 2);
         squares("plate", linear = true);
     }
+    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
     save ("tracer.mp4");
 }
 
-event end (t = 0.75) {
+event end (t = MAX_TIME) {
     end_wall_time = omp_get_wtime();
     fprintf(stderr, "Finished after %g seconds\n", end_wall_time - start_wall_time);
 }
