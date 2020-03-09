@@ -12,10 +12,10 @@
 addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 
 % Master directory where all the data is stored
-master_directory = '/scratch/Uniform_plate/cleaned_data/';
+master_directory = '/scratch/uniform_plate/cleaned_data/';
 
 % Names of the individual directories where the data is stored
-plate_velocity= 0.2;
+plate_velocity= 0.1;
 if plate_velocity < 0.1
     data_directory = sprintf("/scratch/uniform_plate/cleaned_data/plate_vel_%.2f", plate_velocity)
 else
@@ -30,7 +30,7 @@ legend_entry = sprintf("Plate velocity = %.2f", plate_velocity);
 % all of the simulation to check how well volume (or equivalently mass) is
 % conserved
 % 
-% initial_vol = 4 * pi / 3; % Initial volume of the droplet
+% initial_vol = 4 * pi / 3; % Initial volume of the droplet2
 % 
 % % Sets up figure
 % close(figure(1));
@@ -78,12 +78,14 @@ times = dlmread(strcat(data_directory, '/plate_outputs/times.txt'));
 
 % Position to start video at
 start_pos =  floor(0.9 * impact_time * 1000)
+% start_pos = 1;
 no_frames = 100; % Number of video frames
 
 % Maximum pressure at each timestep
 pmax = zeros(no_frames, 3);
 
-for h = [0, 1, 2]
+% for h = [0, 1, 2]
+for h = 0
     % Sets up figure
     close(figure(2));
     figure(2);
