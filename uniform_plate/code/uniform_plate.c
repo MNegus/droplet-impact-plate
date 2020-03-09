@@ -26,6 +26,7 @@ double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
 double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
+double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
 
 /* Boundary conditions */
 // Outflow through boundaries far from impact
@@ -72,6 +73,8 @@ int main() {
     DROP_REFINED_WIDTH = 10 * MIN_CELL_SIZE; // Refined region around droplet
     IMPACT_TIME = (DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
         / (PLATE_VEL - DROP_VEL);
+    
+    INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     // Maximum time is shortly after the Wagner theory prediction of the 
     // turnover point reaching the radius of the droplet
@@ -194,16 +197,38 @@ event output_values_along_plate ( t += 0.001) {
     // Adds the time to the first line of the file
     fprintf(plate_output_file, "t = %g\n", t);
 
-    /* Iterates over the cells on the boundary of the plate */
+    // /* Iterates over the cells on the boundary of the plate */
+    // foreach() {
+    //     // Determines if current cell is along the boundary of the plate
+    //     if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (y < PLATE_WIDTH)) {
+    //         /* Outputs the values along the plate and the two cells above it */
+    //         for (int h = 0; h <= 2; h++) {
+    //             fprintf(plate_output_file, \
+    //                 "y = %g, h = %d, p = %g, u_x = %g, u_y = %g\n",
+    //                 y, h, p[h, 0], u.x[h, 0], u.y[h, 0]);
+    //         }
+    //     }
+    // }
+
+    /* Uses interpolation to read pressure just above the plate */
     foreach() {
         // Determines if current cell is along the boundary of the plate
         if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (y < PLATE_WIDTH)) {
-            /* Outputs the values along the plate and the two cells above it */
-            for (int h = 0; h <= 2; h++) {
-                fprintf(plate_output_file, \
+            // x position to interpolate from
+            double interpolate_read_pos = plate_position + INTERPOLATE_DISTANCE;
+
+            // Interpolated pressure
+            double pressure = interpolate(p, interpolate_read_pos, y);
+
+            // Interpolated velocities
+            double ux = interpolate(u.x, interpolate_read_pos, y);
+            double uy = interpolate(u.y, interpolate_read_pos, y);
+
+            int h = 0; // Legacy, will write out in next update
+
+            fprintf(plate_output_file, \
                     "y = %g, h = %d, p = %g, u_x = %g, u_y = %g\n",
-                    y, h, p[h, 0], u.x[h, 0], u.y[h, 0]);
-            }
+                    y, h, pressure, ux, uy);
         }
     }
 
