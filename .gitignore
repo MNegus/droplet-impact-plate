@@ -11,4 +11,7 @@
 nohup.out
 
 # VSCode files
-.vscode 
+.vscode
+
+# Data analysis
+Figures/ 

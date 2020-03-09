@@ -15,11 +15,15 @@ addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 master_directory = '/scratch/Uniform_plate/cleaned_data/';
 
 % Names of the individual directories where the data is stored
-plate_velocity= 0.1;
-data_directory = sprintf("/scratch/Uniform_plate/cleaned_data/plate_vel_%.1f", plate_velocity)
+plate_velocity= 0.2;
+if plate_velocity < 0.1
+    data_directory = sprintf("/scratch/uniform_plate/cleaned_data/plate_vel_%.2f", plate_velocity)
+else
+    data_directory = sprintf("/scratch/uniform_plate/cleaned_data/plate_vel_%.1f", plate_velocity)
+end
 
 % Readable names to label the plots for each of the data directories
-legend_entry = sprintf("Plate velocity = %.1f", plate_velocity);
+legend_entry = sprintf("Plate velocity = %.2f", plate_velocity);
 
 %% Volume conservation
 % Plots the volume of the droplet volume fraction as a function of time for
@@ -68,6 +72,16 @@ d = @(t) sqrt(3 * t);
 % Impact time
 impact_time = (2.125 - 1 - 1) / (1 - plate_velocity)
 
+% Reads the "times.txt" file from the first data directory. In theory this
+% should be identical in all the cases
+times = dlmread(strcat(data_directory, '/plate_outputs/times.txt'));
+
+% Position to start video at
+start_pos =  floor(0.9 * impact_time * 1000)
+no_frames = 100; % Number of video frames
+
+% Maximum pressure at each timestep
+pmax = zeros(no_frames, 3);
 
 for h = [0, 1, 2]
     % Sets up figure
@@ -84,10 +98,6 @@ for h = [0, 1, 2]
     xlim(x_limits);
     ylim([0 15]);
 
-    % Reads the "times.txt" file from the first data directory. In theory this
-    % should be identical in all the cases
-    times = dlmread(strcat(data_directory, '/plate_outputs/times.txt'));
-
     % Create animated lines and place them in a matrix
     animline = animatedline('Color', [0    0.4470    0.7410]);
 
@@ -103,12 +113,11 @@ for h = [0, 1, 2]
     height=800;
     set(gcf,'position',[10,10,width,height])
     % create the video writer with 1 fps
-    writerObj = VideoWriter(sprintf('Videos/pressure_h_%d_vel_%.1f.avi', h, plate_velocity));
+    writerObj = VideoWriter(sprintf('Videos/pressure_h_%d_vel_%.2f.avi', h, plate_velocity));
     writerObj.FrameRate = 5;
     open(writerObj);
 
-    % Iterates over all times
-    start_pos = floor(0.9 * impact_time * 1000);
+    % Iterates over time
     for m = start_pos: start_pos + 100
         % Choses which data directories to show
 
@@ -125,10 +134,18 @@ for h = [0, 1, 2]
         % Sorts in increasing order of r
         [~, sorted_idxs] = sort(refined_mat(:, 1));
         sorted_mat = refined_mat(sorted_idxs, :);
-
+    
+        % Saves values of r and pressure
+        rs = sorted_mat(:, 1);
+        ps = sorted_mat(:, 3);
+        
         % Creates the animated line
         clearpoints(animline)
-        addpoints(animline, sorted_mat(:, 1), sorted_mat(:, 3));
+        addpoints(animline, rs, ps);
+        
+        % Saves max value of pressure
+        pmax(m - start_pos + 1, 1) = t; % Time
+        pmax(m - start_pos + 1, 2) = max(ps); % Computational pressure
 
         % Wagner line
         clearpoints(wagner_line);
@@ -136,6 +153,9 @@ for h = [0, 1, 2]
             sigmas =  10.^linspace(-10, 5, 1e4);
             [wagner_rs, wagner_ps] = wagner_pressure(sigmas, t - impact_time, plate_velocity, 1);
             addpoints(wagner_line, wagner_rs, wagner_ps);
+            
+            % Records maximum Wagner pressure
+            pmax(m - start_pos + 1, 3) = max(wagner_ps);
         end
 
 
@@ -151,6 +171,27 @@ for h = [0, 1, 2]
 
     close(writerObj);
     
+    % Creates plot of maximum pressure
+    figure(3);
+    hold on;
+    plot(pmax(:, 1), pmax(:, 2)); % Computational pressure
+%     plot(pmax(:, 1), pmax(:, 3)); % Wagner pressure
+    grid on;
+    xlabel("$t$", "Interpreter", "latex", 'Fontsize',30);
+    ylabel("Max pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
+    ax = gca;
+    ax.FontSize = 16;
+    set(gca,'TickLabelInterpreter','latex');
+    title(sprintf("Max pressure for plate velocity = %g, $h = %d$", ...
+        plate_velocity, h), "Interpreter", "latex", 'Fontsize', 15);
+    
+%     L = legend(["Computational", "Wagner"]);
+%     set(L, 'Interpreter', 'latex');
+%     set(L, 'FontSize', 11);
+%     set(L, 'Location', 'northwest');
+    
+    print(gcf, sprintf('Figures/pmax_h_%d_vel_%g.png', h, plate_velocity),'-dpng','-r300');
+    close(figure(3));
 end
 
 

@@ -61,7 +61,7 @@ int main() {
 
     /* Set physical constants */
     rho1 = 1.; // Density of water phase
-    rho2 = RHO_R; // Density of+= 0.05 air phase
+    rho2 = RHO_R; // Density of air phase
     mu1 = 1. / REYNOLDS; // Viscosity of water phase
     mu2 = mu1 * MU_R; // Viscosity of air phase
     f.sigma = 1. / WEBER; // Surface tension at interface
@@ -75,7 +75,7 @@ int main() {
 
     // Maximum time is shortly after the Wagner theory prediction of the 
     // turnover point reaching the radius of the droplet
-    MAX_TIME = 1.5 * (IMPACT_TIME + 1 / (3 * (1 + PLATE_VEL))); 
+    MAX_TIME = 1.5 * (IMPACT_TIME + 1. / (3. * (1. + PLATE_VEL))); 
 
     /* Run the simulation */
     run();

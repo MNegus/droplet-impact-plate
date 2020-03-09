@@ -5,7 +5,7 @@ Header file for the parameters to feed into the simulations for droplet impact*/
 const double RHO_R = 0.003; // Density ratio
 const double MU_R = 0.002; // Viscosity ratio
 const double REYNOLDS = 1000.0; // Reynolds number
-const double WEBER = 1000.0; // Weber number
+const double WEBER = 10000.0; // Weber number
 const double FR = 10.1; // Froude number
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
 const double DROP_RADIUS = 1.0; // Radius of droplet
