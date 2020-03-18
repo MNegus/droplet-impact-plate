@@ -12,14 +12,14 @@
 addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 
 % Master directory where all the data is stored
-master_directory = '/scratch/uniform_plate/cleaned_data/';
+master_directory = '/scratch/uniform_plate/second_interpolated_cleaned_data';
 
 % Names of the individual directories where the data is stored
-plate_velocity= 0.1;
+plate_velocity = 0.1;
 if plate_velocity < 0.1
-    data_directory = sprintf("/scratch/uniform_plate/cleaned_data/plate_vel_%.2f", plate_velocity)
+    data_directory = sprintf("%s/plate_vel_%.2f", master_directory, plate_velocity)
 else
-    data_directory = sprintf("/scratch/uniform_plate/cleaned_data/plate_vel_%.1f", plate_velocity)
+    data_directory = sprintf("%s/plate_vel_%.1f", master_directory, plate_velocity)
 end
 
 % Readable names to label the plots for each of the data directories
@@ -182,11 +182,13 @@ for h = 0
     xlabel("$t$", "Interpreter", "latex", 'Fontsize',30);
     ylabel("Max pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
     ax = gca;
-    ax.FontSize = 16;
+    ax.FontSize = 10;
     set(gca,'TickLabelInterpreter','latex');
     title(sprintf("Max pressure for plate velocity = %g, $h = %d$", ...
         plate_velocity, h), "Interpreter", "latex", 'Fontsize', 15);
     
+    xticks(linspace(min(pmax(:, 1)), max(pmax(:, 1)), 12))
+    xtickformat('%.2f')
 %     L = legend(["Computational", "Wagner"]);
 %     set(L, 'Interpreter', 'latex');
 %     set(L, 'FontSize', 11);
