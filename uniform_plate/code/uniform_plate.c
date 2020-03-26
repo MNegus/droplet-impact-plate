@@ -78,7 +78,8 @@ int main() {
 
     // Maximum time is shortly after the Wagner theory prediction of the 
     // turnover point reaching the radius of the droplet
-    MAX_TIME = 1.5 * (IMPACT_TIME + 1. / (3. * (1. + PLATE_VEL))); 
+    double wagner_max_time = 1.5 * (IMPACT_TIME + 1. / (3. * (1. + PLATE_VEL)));
+    MAX_TIME = min(HARD_MAX_TIME, wagner_max_time); 
 
     /* Run the simulation */
     run();
