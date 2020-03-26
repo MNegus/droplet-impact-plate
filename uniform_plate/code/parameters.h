@@ -18,4 +18,8 @@ const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
 const int MINLEVEL = 4; // Minimum refinement level 
 const int MAXLEVEL = 12; // Maximum refinement level
 const double BOX_WIDTH = 4.0; // Width of the computational box
-
+const double START_OUTPUT_TIME = 0.16; // Time to start outputs
+const double END_OUTPUT_TIME = 0.18; // Time to end outputs
+const double GFS_OUTPUT_TIMESTEP = 1e-4; // Time between gfs outputs
+const double PLATE_OUTPUT_TIMESTEP = 1e-4; // Time between plate outputs
+const double INTERFACE_OUTPUT_TIMESTEP = 1e-4; // Time between interface outputs
