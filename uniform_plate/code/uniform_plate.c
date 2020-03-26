@@ -171,9 +171,9 @@ event output_volume (t += 0.001) {
     fprintf(stderr, "t = %g, volume = %g\n", t, 2 * pi * statsf(f).sum);
 }
 
-event output_interface (t += 0.001) {
+event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 /* Outputs the interface locations of the droplet */
-
+    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
     // Creates text file to save output to
     char interface_filename[80];
     sprintf(interface_filename, "interface_%d.txt", interface_output_no);
@@ -184,11 +184,13 @@ event output_interface (t += 0.001) {
     fclose(interface_file);
 
     interface_output_no++;
+    }
 }
 
-event output_values_along_plate ( t += 0.001) {
+event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
 /* Outputs the values of pressure and velocities along the plate */
 
+    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
     // Creates the file for outputting data
     char plate_output_filename[80];
     sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
@@ -235,44 +237,46 @@ event output_values_along_plate ( t += 0.001) {
     fclose(plate_output_file);
 
     plate_output_no++; // Increments output number
+    }
 }
 
-event gfs_output (t += 0.01) {
+event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 /* Saves a gfs file */
-
+    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
     char gfs_filename[80];
     sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
     output_gfs(file = gfs_filename);
 
     gfs_output_no++;
-}
-
-event images (t += 0.005) {
-/* Produces movies and images using bview */
-
-    // Creates a string with the time to put on the plots
-    char time_str[80];
-    sprintf(time_str, "t = %g\n", t);
-
-    // Set up bview box
-    view (width = 512, height = 512, fov = 30, ty = -0.5, \
-        quat = {0, 0, -0.707, 0.707});
-
-    // Movie of the volume fraction of the droplet
-    clear();
-    draw_vof("f", lw = 2);
-    draw_vof("plate", lw = 2);
-    squares("f", linear = true);
-    squares("plate", linear = true);
-    mirror ({0,1}) {
-        draw_vof("f", lw = 2);
-        squares("f", linear = true);
-        draw_vof("plate", lw = 2);
-        squares("plate", linear = true);
     }
-    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-    save ("tracer.mp4");
 }
+
+// event images (t += 0.005) {
+// /* Produces movies and images using bview */
+
+//     // Creates a string with the time to put on the plots
+//     char time_str[80];
+//     sprintf(time_str, "t = %g\n", t);
+
+//     // Set up bview box
+//     view (width = 512, height = 512, fov = 30, ty = -0.5, \
+//         quat = {0, 0, -0.707, 0.707});
+
+//     // Movie of the volume fraction of the droplet
+//     clear();
+//     draw_vof("f", lw = 2);
+//     draw_vof("plate", lw = 2);
+//     squares("f", linear = true);
+//     squares("plate", linear = true);
+//     mirror ({0,1}) {
+//         draw_vof("f", lw = 2);
+//         squares("f", linear = true);
+//         draw_vof("plate", lw = 2);
+//         squares("plate", linear = true);
+//     }
+//     draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+//     save ("tracer.mp4");
+// }
 
 event end (t = MAX_TIME) {
     end_wall_time = omp_get_wtime();
