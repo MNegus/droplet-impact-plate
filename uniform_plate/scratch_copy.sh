@@ -14,6 +14,3 @@ mkdir ${SCRATCH_DIR}/${SUB_DIR_NAME}
 
 # Copies the code directory over to the scratch
 cp -r code ${SCRATCH_DIR}/${SUB_DIR_NAME}
-
-# Copies the data cleaning directory over to the scratch
-cp -r data_cleaning ${SCRATCH_DIR}/${SUB_DIR_NAME}

@@ -11,11 +11,14 @@
 # quantitative analysis easier.
 ################################################################################
 
+# Parent directory where the raw data is
+PARENT_DIR=$1
+
 # Directory where raw data is stored
-RAW_DATA_DIR=../raw_data
+RAW_DATA_DIR=${PARENT_DIR}/raw_data
 
 # Directory where the cleaned data is stored
-CLEANED_DATA_DIR=../cleaned_data
+CLEANED_DATA_DIR=${PARENT_DIR}/cleaned_data
 
 # Creates the directories to store cleaned data
 mkdir ${CLEANED_DATA_DIR}
