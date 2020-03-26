@@ -8,4 +8,4 @@
 OFFICE_DIR=$1
 HOME_DIR=$2
 
-scp office-machine:${OFFICE_DIR} ${HOME_DIR}
+scp -r office-machine:${OFFICE_DIR} ${HOME_DIR}
