@@ -56,6 +56,12 @@ double distance_from_plate (double xp, double yp) ;
 int main() {
 /* Main function for running the simulation */
 
+    /* If filtering is set in the parameters file, then define the FILTERED 
+    macro */
+    if (FILTERED) {
+        #define FILTERED 1
+    }
+
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
     size(BOX_WIDTH); // Size of the domain
