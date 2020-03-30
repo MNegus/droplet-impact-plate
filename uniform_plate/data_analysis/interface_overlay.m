@@ -43,7 +43,7 @@ line_colors = [[0    0.4470    0.7410];
 % conduct the analysis
 
 % Master directory where all the data is stored
-master_directory = '~/repos/plate-impact/uniform_plate/code/';
+master_directory = '/mnt/newarre/oscillation_study/cleaned_data';
 
 % Names of the individual directories where the data is stored
 data_directories = ["uniform_plate"];

@@ -12,15 +12,16 @@
 addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 
 % Master directory where all the data is stored
-master_directory = '/scratch/uniform_plate/second_interpolated_cleaned_data';
+master_directory = '/mnt/newarre/oscillation_study/cleaned_data';
 
 % Names of the individual directories where the data is stored
 plate_velocity = 0.1;
-if plate_velocity < 0.1
-    data_directory = sprintf("%s/plate_vel_%.2f", master_directory, plate_velocity)
-else
-    data_directory = sprintf("%s/plate_vel_%.1f", master_directory, plate_velocity)
-end
+% if plate_velocity < 0.1
+%     data_directory = sprintf("%s/plate_vel_%.2f", master_directory, plate_velocity)
+% else
+%     data_directory = sprintf("%s/plate_vel_%.1f", master_directory, plate_velocity)
+% end
+data_directory = master_directory;
 
 % Readable names to label the plots for each of the data directories
 legend_entry = sprintf("Plate velocity = %.2f", plate_velocity);
@@ -77,47 +78,52 @@ impact_time = (2.125 - 1 - 1) / (1 - plate_velocity)
 times = dlmread(strcat(data_directory, '/plate_outputs/times.txt'));
 
 % Position to start video at
-start_pos =  floor(0.9 * impact_time * 1000)
-% start_pos = 1;
+% start_pos =  floor(0.9 * impact_time * 1000)
+start_pos = 1;
 no_frames = 100; % Number of video frames
 
 % Maximum pressure at each timestep
 pmax = zeros(no_frames, 3);
 
+% Turn to false to not show graph
+show_graph = false;
+
 % for h = [0, 1, 2]
 for h = 0
-    % Sets up figure
-    close(figure(2));
-    figure(2);
-    hold on;
-    grid on;
-    xlabel("$r$", "Interpreter", "latex", 'Fontsize',30);
-    ylabel("Pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
-    ax = gca;
-    ax.FontSize = 16;
-    set(gca,'TickLabelInterpreter','latex');
-    x_limits = [0, 1];
-    xlim(x_limits);
-    ylim([0 15]);
+    if show_graph == true 
+        % Sets up figure
+        close(figure(2));
+        figure(2);
+        hold on;
+        grid on;
+        xlabel("$r$", "Interpreter", "latex", 'Fontsize',30);
+        ylabel("Pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
+        ax = gca;
+        ax.FontSize = 16;
+        set(gca,'TickLabelInterpreter','latex');
+        x_limits = [0, 1];
+        xlim(x_limits);
+        ylim([0 15]);
 
-    % Create animated lines and place them in a matrix
-    animline = animatedline('Color', [0    0.4470    0.7410]);
+        % Create animated lines and place them in a matrix
+        animline = animatedline('Color', [0    0.4470    0.7410]);
 
-    wagner_line = animatedline('Color', [0.8500    0.3250    0.0980]);
+        wagner_line = animatedline('Color', [0.8500    0.3250    0.0980]);
 
 
-     % Sets up the legend
-    L = legend([legend_entry, 'Wagner']);
-    set(L, 'Interpreter', 'latex');
-    set(L, 'FontSize', 15);
+         % Sets up the legend
+        L = legend([legend_entry, 'Wagner']);
+        set(L, 'Interpreter', 'latex');
+        set(L, 'FontSize', 15);
 
-    width=800;
-    height=800;
-    set(gcf,'position',[10,10,width,height])
-    % create the video writer with 1 fps
-    writerObj = VideoWriter(sprintf('Videos/pressure_h_%d_vel_%.2f.avi', h, plate_velocity));
-    writerObj.FrameRate = 5;
-    open(writerObj);
+        width=800;
+        height=800;
+        set(gcf,'position',[10,10,width,height])
+        % create the video writer with 1 fps
+        writerObj = VideoWriter(sprintf('Videos/pressure_h_%d_vel_%.2f.avi', h, plate_velocity));
+        writerObj.FrameRate = 5;
+        open(writerObj);
+    end
 
     % Iterates over time
     for m = start_pos: start_pos + 100
@@ -142,41 +148,48 @@ for h = 0
         ps = sorted_mat(:, 3);
         
         % Creates the animated line
-        clearpoints(animline)
-        addpoints(animline, rs, ps);
+        if show_graph == true
+            clearpoints(animline)
+            addpoints(animline, rs, ps);
+        end
         
         % Saves max value of pressure
         pmax(m - start_pos + 1, 1) = t; % Time
         pmax(m - start_pos + 1, 2) = max(ps); % Computational pressure
 
         % Wagner line
-        clearpoints(wagner_line);
+        if show_graph == true
         if t > impact_time
             sigmas =  10.^linspace(-10, 5, 1e4);
             [wagner_rs, wagner_ps] = wagner_pressure(sigmas, t - impact_time, plate_velocity, 1);
+            
             addpoints(wagner_line, wagner_rs, wagner_ps);
+            clearpoints(wagner_line);
             
             % Records maximum Wagner pressure
             pmax(m - start_pos + 1, 3) = max(wagner_ps);
         end
+        end
 
+        if show_graph == true
+            ylim([0 , 20]);
+            xlim([0, max([1, 1.5 * d(t - impact_time)])]);
 
-        ylim([0 , 20]);
-        xlim([0, max([1, 1.5 * d(t - impact_time)])]);
-
-        title(sprintf("Pressure: $h$ = %d, $t$ = %g, Plate vel = %g\n", h, times(m, 2), plate_velocity), ...
-            "Interpreter", "latex", 'Fontsize', 15);
-        drawnow;
-        frame = getframe(gcf);
-        writeVideo(writerObj, frame);
+            title(sprintf("Pressure: $h$ = %d, $t$ = %g, Plate vel = %g\n", h, times(m, 2), plate_velocity), ...
+                "Interpreter", "latex", 'Fontsize', 15);
+            drawnow;
+            frame = getframe(gcf);
+            writeVideo(writerObj, frame);
+        end
     end
-
-    close(writerObj);
+    if show_graph == true
+        close(writerObj);
+    end
     
     % Creates plot of maximum pressure
     figure(3);
     hold on;
-    plot(pmax(:, 1), pmax(:, 2)); % Computational pressure
+    plot(pmax(:, 1), pmax(:, 2), '-o'); % Computational pressure
 %     plot(pmax(:, 1), pmax(:, 3)); % Wagner pressure
     grid on;
     xlabel("$t$", "Interpreter", "latex", 'Fontsize',30);
@@ -195,7 +208,9 @@ for h = 0
 %     set(L, 'Location', 'northwest');
     
     print(gcf, sprintf('Figures/pmax_h_%d_vel_%g.png', h, plate_velocity),'-dpng','-r300');
-    close(figure(3));
+%     close(figure(3));
+    pmax(73, 1)
+    pmax(73, 2)
 end
 
 
