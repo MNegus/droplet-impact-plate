@@ -144,6 +144,31 @@ event moving_plate (i++) {
         u.y[] = (1. - plate[]) * u.y[]; 
     }
     boundary ((scalar *){u}); // Redefine boundary conditions for u
+
+    /* EXPERIMENTAL: Sets the pressure */
+    /* We try a fix of by setting the pressure in the mixed cell (where the 
+    plate cuts through) to be equal to the pressure in the cell above. This is 
+    kind of like a retroactive Neumann condition on the pressure */
+    foreach() {
+        /* Finds the cells which the plate cuts through. If the plate is along a
+        cell boundary, then nothing is done. More thoroughly:
+            1) For a cell to be an interfacial cell, then it MUST be true that 
+            the cell above has plate[] == 0 and the cell below has plate[] == 1
+            2) If the plate cuts through a cell, then point 1) then for each y, 
+            point 1) is only true for one cell
+            3) However if the plate is lying on the boundary of a cell, then 
+            there will be two cells where this is true for each y. In this case,
+            plate[] == 0 or 1. We want to do nothing in these cases, so we
+            ensure that plate[] > 0 and plate[] < 1.
+            4) We also only test the top part of the plate, away from the curved
+            edge, so ensure y < PLATE_WIDTH
+        */
+        if (plate[1, 0] == 0) && (plate[-1, 0] == 1) && (plate[] > 0) \
+            && (plate[] < 1) && (y < PLATE_WIDTH) {
+            /* Sets pressure to be equal to pressure in above cell */
+            p[] = p[1, 0]; 
+         }
+    }
 }
 
 event refinement (i++) {
@@ -236,8 +261,8 @@ event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
             int h = 0; // Legacy, will write out in next update
 
             fprintf(plate_output_file, \
-                    "y = %g, h = %d, p = %g, u_x = %g, u_y = %g\n",
-                    y, h, pressure, ux, uy);
+                    "y = %g, x = %g, p = %g, u_x = %g, u_y = %g\n",
+                    y, interpolate_read_pos, pressure, ux, uy);
         }
     }
 
