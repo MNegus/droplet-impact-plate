@@ -163,8 +163,8 @@ event moving_plate (i++) {
             4) We also only test the top part of the plate, away from the curved
             edge, so ensure y < PLATE_WIDTH
         */
-        if (plate[1, 0] == 0) && (plate[-1, 0] == 1) && (plate[] > 0) \
-            && (plate[] < 1) && (y < PLATE_WIDTH) {
+        if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (plate[] > 0) \
+            && (plate[] < 1) && (y < PLATE_WIDTH)) {
             /* Sets pressure to be equal to pressure in above cell */
             p[] = p[1, 0]; 
          }
@@ -257,8 +257,6 @@ event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
             // Interpolated velocities
             double ux = interpolate(u.x, interpolate_read_pos, y);
             double uy = interpolate(u.y, interpolate_read_pos, y);
-
-            int h = 0; // Legacy, will write out in next update
 
             fprintf(plate_output_file, \
                     "y = %g, x = %g, p = %g, u_x = %g, u_y = %g\n",
