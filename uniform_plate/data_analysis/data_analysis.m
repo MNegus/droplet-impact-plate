@@ -1,7 +1,7 @@
 %% data_analysis.m
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Analyses the data resulting from the Plate_validation simulations. It is
-% assumed the data has been cleaned using the data_clean.sh utility
+% Analyses the data resulting from the uniform_plate simulations. It is
+% assumed the data has been cleaned using the data cleaning utilities.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %% Definitions
@@ -12,7 +12,10 @@
 addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 
 % Master directory where all the data is stored
-master_directory = '/mnt/newarre/oscillation_study/cleaned_data';
+master_directory = '/mnt/newarre/oscillation_study';
+
+% Directory to store the outputs of the data analysis
+analysis_directory = sprintf("%s/data_analysis", master_directory);
 
 % Names of the individual directories where the data is stored
 plate_velocity = 0.1;
@@ -21,7 +24,7 @@ plate_velocity = 0.1;
 % else
 %     data_directory = sprintf("%s/plate_vel_%.1f", master_directory, plate_velocity)
 % end
-data_directory = master_directory;
+cleaned_data_directory = sprintf("%s/cleaned_data", master_directory);
 
 % Readable names to label the plots for each of the data directories
 legend_entry = sprintf("Plate velocity = %.2f", plate_velocity);
@@ -75,7 +78,7 @@ impact_time = (2.125 - 1 - 1) / (1 - plate_velocity)
 
 % Reads the "times.txt" file from the first data directory. In theory this
 % should be identical in all the cases
-times = dlmread(strcat(data_directory, '/plate_outputs/times.txt'));
+times = dlmread(strcat(cleaned_data_directory, '/plate_outputs/times.txt'));
 
 % Position to start video at
 % start_pos =  floor(0.9 * impact_time * 1000)
@@ -110,7 +113,6 @@ for h = 0
 
         wagner_line = animatedline('Color', [0.8500    0.3250    0.0980]);
 
-
          % Sets up the legend
         L = legend([legend_entry, 'Wagner']);
         set(L, 'Interpreter', 'latex');
@@ -120,7 +122,7 @@ for h = 0
         height=800;
         set(gcf,'position',[10,10,width,height])
         % create the video writer with 1 fps
-        writerObj = VideoWriter(sprintf('Videos/pressure_h_%d_vel_%.2f.avi', h, plate_velocity));
+        writerObj = VideoWriter(sprintf('%s/Videos/pressure_h_%d_vel_%.2f.avi', analysis_directory, h, plate_velocity));
         writerObj.FrameRate = 5;
         open(writerObj);
     end
@@ -132,7 +134,7 @@ for h = 0
         t = 0.001 * m; % Time
 
         % Loads in data from the text file
-        output_matrix = dlmread(strcat(data_directory, ...
+        output_matrix = dlmread(strcat(cleaned_data_directory, ...
             '/plate_outputs/output_', num2str(m), '.txt'));
 
         % Isolates data with matching value of h
@@ -207,10 +209,9 @@ for h = 0
 %     set(L, 'FontSize', 11);
 %     set(L, 'Location', 'northwest');
     
-    print(gcf, sprintf('Figures/pmax_h_%d_vel_%g.png', h, plate_velocity),'-dpng','-r300');
+    print(gcf, sprintf('%s/Figures/pmax_h_%d_vel_%g.png', analysis_directory, h, plate_velocity),'-dpng','-r300');
 %     close(figure(3));
-    pmax(73, 1)
-    pmax(73, 2)
+
 end
 
 
