@@ -51,7 +51,8 @@ double end_wall_time;
 
 /* Function declarations */
 double plate_region(double xp, double yp); // Defines VOF field for plate
-double distance_from_plate (double xp, double yp) ; 
+double distance_from_plate (double xp, double yp); // Gives distance from plate 
+double force_on_plate (); // Calculates the force on the plate via integration
 
 int main() {
 /* Main function for running the simulation */
@@ -357,4 +358,19 @@ double plate_region (double xp, double yp) {
 
     // Returns the greatest value of the deviation
     return max(xp_deviation, yp_deviation);
+}
+
+double force_on_plate() {
+/* Calculates the force that the fluid is exerting on the top of the plate */
+    double force = 0; // Initialse force to be zero
+
+    foreach() {
+        if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) \
+            && (x >= plate_position) && y < (PLATE_WIDTH)) {
+                double u_x_deriv = (u.x[1, 0] - u.x[]) / MIN_CELL_SIZE;
+
+                // Work out how to take into account variable visosity
+                // force += x^2 * (p[] - 2 * mu1 )
+            }
+    }
 }
