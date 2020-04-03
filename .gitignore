@@ -14,4 +14,7 @@ nohup.out
 .vscode
 
 # Data analysis
-Figures/ 
+Figures/
+
+# MATLAB temporary save files
+*.m~ 
