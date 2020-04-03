@@ -19,7 +19,7 @@ addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 MAXLEVEL = 12; % Maximum refinement level of the simulation
 BOX_WIDTH = 4.0; % Width of the computational box
 min_cell_size = BOX_WIDTH / (2 ^ MAXLEVEL); % Size of smallest cell
-impact_time = 0.2015; % Theoretical time of impact
+impact_time =  0.1389; % Theoretical time of impact
 
 % Base height for the plate, which is perturbed on the three plate runs
 base_plate_height = 1000 * min_cell_size;
@@ -43,10 +43,10 @@ line_colors = [[0    0.4470    0.7410];
 % conduct the analysis
 
 % Master directory where all the data is stored
-master_directory = '/mnt/newarre/oscillation_study/cleaned_data';
+master_directory = '/mnt/newarre/';
 
 % Names of the individual directories where the data is stored
-data_directories = ["uniform_plate"];
+data_directories = ["plate_vel_0.1", "filtered_run", "neumann_pressure"];
 
 % Edits so the full directory address is given in data_directories
 for k = 1:length(data_directories)
@@ -54,9 +54,9 @@ for k = 1:length(data_directories)
 end
 
 % Readable names to label the plots for each of the data directories
-legend_entries = ["Plate"];
+legend_entries = ["No filter", "Filtered", "Neumann pressure"];
 
-dir_arr = [1]; % Specifies which directories to plot
+dir_arr = [1, 2, 3]; % Specifies which directories to plot
 
 %% Function definitions
 % Defines any anonymous functions needed
@@ -112,11 +112,12 @@ if plot_type == "macro"
     % Coarsening options
     coarsen = true; % Coarsens the data set being plotted
     coarsen_number = 4; % Number of times to conduct coarsening
+    coarsen_threshold = 300;
     coarsen_tol = 1e-2;
     remove_rest = true; % Removes points such as entrapped bubbles
     
     % Create the video writer object
-    writerObj = VideoWriter('Videos/interface_overlay.avi');
+    writerObj = VideoWriter(sprintf('%s/interface_overlay.avi', master_directory));
 elseif plot_type == "jet"
     % Coarsens if the number of points on a line is more than the threshold 
     coarsen = true; 
@@ -134,7 +135,7 @@ writerObj.FrameRate = 5;
 open(writerObj);
 
 % Loops over plots for specified time interval
-for plot_no = 200:500
+for plot_no = 111:300
     
     
     t = plot_no * 0.001; % Current time
@@ -163,8 +164,8 @@ for plot_no = 200:500
     % Loops over the different simulation outputs
     for k = dir_arr
         % Name of file where interface data is stored
-        filename = sprintf("%s/interface_%d.txt", data_directories(k), ...
-            plot_no);
+        filename = sprintf("%s/raw_data/interface_%d.txt",...
+            data_directories(k), plot_no);
         
         % Reads the starting and ending points of the line segments
         [start_points, end_points] = ...
@@ -185,13 +186,12 @@ for plot_no = 200:500
         end_points = end_points(keep_points, :);
 
         % Coarsens the data
-        if plot_type == "jet"
+%         if plot_type == "jet"
             if coarsen == true && length(start_points) > coarsen_threshold
                 loop_no = 1;
                 while length(start_points) > 2 * coarsen_threshold ...
                         && loop_no < 5
                     loop_no = loop_no + 1;
-                    disp("hello")
                     % Coarsens from top
                     [~, first_seg] = max(start_points(:, 2));
 
@@ -208,7 +208,7 @@ for plot_no = 200:500
                     = coarsen_interface(start_points, end_points, ... 
                         first_seg, 1, 1e-2, remove_rest);
             end
-        end
+%         end
         length(start_points)
         % Plots the line segments with associated colour and label
         line_segment_plot(start_points, end_points, include_points, ...
