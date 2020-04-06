@@ -77,7 +77,7 @@ int main() {
     /* Derived constants */
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
-    DROP_REFINED_WIDTH = 10 * MIN_CELL_SIZE; // Refined region around droplet
+    DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
     IMPACT_TIME = (DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
         / (PLATE_VEL - DROP_VEL);
     
@@ -100,13 +100,6 @@ event init (t = 0) {
 
     plate_position = INITIAL_PLATE_TOP; // Initialises top of plate position
 
-    /* Refines around the plate */
-    refine(distance_from_plate(x, y) < PLATE_REFINED_WIDTH \
-        && level < MAXLEVEL - 2);
-    
-    /* Initialises the plate volume fraction */
-    fraction(plate, 1 - plate_region(x, y)); 
-
     /* Refines around the droplet */
     refine(sq(x - DROP_CENTRE) + sq(y) < sq(DROP_RADIUS + DROP_REFINED_WIDTH) \
         && sq(x - DROP_CENTRE) + sq(y) > sq(DROP_RADIUS - DROP_REFINED_WIDTH) \
@@ -114,6 +107,13 @@ event init (t = 0) {
     
     /* Initialises the droplet volume fraction */
     fraction(f, -sq(x - DROP_CENTRE) - sq(y) + sq(DROP_RADIUS));
+
+     /* Refines around the plate */
+    refine(distance_from_plate(x, y) < PLATE_REFINED_WIDTH \
+        && level < MAXLEVEL - 2);
+    
+    /* Initialises the plate volume fraction */
+    fraction(plate, 1 - plate_region(x, y)); 
 
     /* Initialises the velocities */
     foreach () {
@@ -125,7 +125,6 @@ event init (t = 0) {
 
 
 event moving_plate (i++) {
-
     /* Updates plate position */
     plate_position = INITIAL_PLATE_TOP + PLATE_VEL * t;
 
@@ -201,7 +200,7 @@ event small_droplet_removal (i++) {
 
 event output_volume (t += 0.001) {
 /* Outputs the volume of the liquid phase to the log file */
-    fprintf(stderr, "t = %g, volume = %g\n", t, 2 * pi * statsf(f).sum);
+    fprintf(stderr, "t = %g, volume = %g, force = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
 }
 
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
@@ -363,14 +362,20 @@ double plate_region (double xp, double yp) {
 double force_on_plate() {
 /* Calculates the force that the fluid is exerting on the top of the plate */
     double force = 0; // Initialse force to be zero
-
+    int found_cell = 0;
     foreach() {
         if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) \
-            && (x >= plate_position) && y < (PLATE_WIDTH)) {
-                double u_x_deriv = (u.x[1, 0] - u.x[]) / MIN_CELL_SIZE;
-
+            && (x >= plate_position - 0.5 * Delta) && y < (PLATE_WIDTH)) {
+                found_cell = 1;
+                double u_x_deriv = (u.x[2, 0] - u.x[1, 0]) / Delta;
+                double ff = f[1, 0];
                 // Work out how to take into account variable visosity
-                // force += x^2 * (p[] - 2 * mu1 )
-            }
+                force += y * y * (p[1, 0] - 2 * mu(ff) * u_x_deriv);
+        }
     }
+    if (found_cell == 0) {
+        fprintf(stderr, "No cell found\n");
+    }
+    force = 2 * pi * force;
+    return force;
 }
