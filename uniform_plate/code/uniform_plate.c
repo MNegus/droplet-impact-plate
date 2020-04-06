@@ -368,9 +368,11 @@ double force_on_plate() {
             && (x >= plate_position - 0.5 * Delta) && y < (PLATE_WIDTH)) {
                 found_cell = 1;
                 double u_x_deriv = (u.x[2, 0] - u.x[1, 0]) / Delta;
+
                 double ff = f[1, 0];
+                double avg_mu = ff * (mu1 - mu2) + mu2;
                 // Work out how to take into account variable visosity
-                force += y * y * (p[1, 0] - 2 * mu(ff) * u_x_deriv);
+                force += y * y * Delta * (p[1, 0] - 2 * avg_mu * u_x_deriv);
         }
     }
     if (found_cell == 0) {
