@@ -48,6 +48,7 @@ double current_s; // Current value of the displacement s(t)
 double previous_s; // Value of the displacement s(t) at the previous timestep
 double next_s; // Value of the displacement s(t) at the next timestep
 double plate_vel; // Velocity of plate, equal to -s'(t)
+double plate_position;
 int gfs_output_no = 1; // Records how many GFS files have been outputted
 int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
@@ -83,19 +84,20 @@ int main() {
     current_s = 0.; // Initialise displacement as 0
     previous_s = 0.; // Ensures initial velocity is zero
     plate_vel = 0.; // Initial zero plate velocity
+    plate_position = INITIAL_PLATE_TOP; // Initialises top of plate position
 
     /* Derived constants */
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
     DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
-    IMPACT_TIME = (DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
-        / (PLATE_VEL - DROP_VEL);
+    IMPACT_TIME = -(DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
+        / (DROP_VEL);
     
     INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     // Maximum time is shortly after the Wagner theory prediction of the 
     // turnover point reaching the radius of the droplet
-    double wagner_max_time = 1.5 * (IMPACT_TIME + 1. / (3. * (1. + PLATE_VEL)));
+    double wagner_max_time = 1.5 * (IMPACT_TIME + 1. / 3.);
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time); 
 
     /* Run the simulation */
@@ -108,8 +110,7 @@ event init (t = 0) {
     // Records the wall time
     start_wall_time = omp_get_wtime();
 
-    plate_position = INITIAL_PLATE_TOP; // Initialises top of plate position
-
+    
     /* Refines around the droplet */
     refine(sq(x - DROP_CENTRE) + sq(y) < sq(DROP_RADIUS + DROP_REFINED_WIDTH) \
         && sq(x - DROP_CENTRE) + sq(y) > sq(DROP_RADIUS - DROP_REFINED_WIDTH) \
@@ -128,7 +129,7 @@ event init (t = 0) {
     /* Initialises the velocities */
     foreach () {
         u.x[] = DROP_VEL * f[]; // Droplet velocity
-        u.x[] = plate[] * PLATE_VEL + (1 - plate[]) * u.x[]; // Plate velocity
+        u.x[] = plate[] * plate_vel + (1 - plate[]) * u.x[]; // Plate velocity
     }
     boundary ((scalar *){u});
 }
@@ -250,7 +251,7 @@ event moving_plate (i++) {
 
     /* Calculates the next s position */
     // Calculates the next value of s using finite differences
-    next_s = (dt^2 / (ALPHA + BETA * dt)) * (force_on_plate() \
+    next_s = (dt * dt / (ALPHA + BETA * dt)) * (force_on_plate() \
         - (GAMMA - 2 * BETA / dt) * current_s - (BETA / dt) * previous_s);
 
     // Redefines previous and current value of s
@@ -280,30 +281,6 @@ event moving_plate (i++) {
     }
     boundary ((scalar *){u}); // Redefine boundary conditions for u
 
-    /* EXPERIMENTAL: Sets the pressure */
-    /* We try a fix of by setting the pressure in the mixed cell (where the 
-    plate cuts through) to be equal to the pressure in the cell above. This is 
-    kind of like a retroactive Neumann condition on the pressure */
-    // foreach() {
-    //     /* Finds the cells which the plate cuts through. If the plate is along a
-    //     cell boundary, then nothing is done. More thoroughly:
-    //         1) For a cell to be an interfacial cell, then it MUST be true that 
-    //         the cell above has plate[] == 0 and the cell below has plate[] == 1
-    //         2) If the plate cuts through a cell, then point 1) then for each y, 
-    //         point 1) is only true for one cell
-    //         3) However if the plate is lying on the boundary of a cell, then 
-    //         there will be two cells where this is true for each y. In this case,
-    //         plate[] == 0 or 1. We want to do nothing in these cases, so we
-    //         ensure that plate[] > 0 and plate[] < 1.
-    //         4) We also only test the top part of the plate, away from the curved
-    //         edge, so ensure y < PLATE_WIDTH
-    //     */
-    //     if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (plate[] > 0) \
-    //         && (plate[] < 1) && (y < PLATE_WIDTH)) {
-    //         /* Sets pressure to be equal to pressure in above cell */
-    //         p[] = p[1, 0]; 
-    //      }
-    // }
 }
 
 event refinement (i++) {
