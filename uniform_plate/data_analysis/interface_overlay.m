@@ -16,19 +16,21 @@ function interface_overlay(plot_type)
 % Adds the interface analysis to path
 addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 
-MAXLEVEL = 12; % Maximum refinement level of the simulation
+MAXLEVEL = 11; % Maximum refinement level of the simulation
 BOX_WIDTH = 4.0; % Width of the computational box
 min_cell_size = BOX_WIDTH / (2 ^ MAXLEVEL); % Size of smallest cell
-impact_time =  0.1389; % Theoretical time of impact
+plate_vel = 0.1;
+impact_time =  (2.125 - 1 - 1) / (plate_vel + 1) % Theoretical time of impact
+interface_output_timestep = 1e-3;
 
-% Base height for the plate, which is perturbed on the three plate runs
-base_plate_height = 1000 * min_cell_size;
-
-% Heights for full alignment, half alignment, quarter alignment and solid
-% wall (where the plate height is zero)
-plate_heights = [base_plate_height, ...
-    base_plate_height + 0.5 * min_cell_size, ...
-    base_plate_height + 0.25 * min_cell_size, 0];
+% % Base height for the plate, which is perturbed on the three plate runs
+% base_plate_height = 1000 * min_cell_size;
+% 
+% % Heights for full alignment, half alignment, quarter alignment and solid
+% % wall (where the plate height is zero)
+% plate_heights = [base_plate_height, ...
+%     base_plate_height + 0.5 * min_cell_size, ...
+%     base_plate_height + 0.25 * min_cell_size, 0];
 
 %% Plotting parameters
 %
@@ -46,7 +48,7 @@ line_colors = [[0    0.4470    0.7410];
 master_directory = '/mnt/newarre/';
 
 % Names of the individual directories where the data is stored
-data_directories = ["plate_vel_0.1", "filtered_run", "neumann_pressure"];
+data_directories = ["level_11"];
 
 % Edits so the full directory address is given in data_directories
 for k = 1:length(data_directories)
@@ -54,9 +56,9 @@ for k = 1:length(data_directories)
 end
 
 % Readable names to label the plots for each of the data directories
-legend_entries = ["No filter", "Filtered", "Neumann pressure"];
+legend_entries = ["Level 11"];
 
-dir_arr = [1, 2, 3]; % Specifies which directories to plot
+dir_arr = [1]; % Specifies which directories to plot
 
 %% Function definitions
 % Defines any anonymous functions needed
@@ -138,7 +140,7 @@ open(writerObj);
 for plot_no = 111:300
     
     
-    t = plot_no * 0.001; % Current time
+    t = plot_no * interface_output_timestep; % Current time
     
     % Calculates turnover point location
     if t > impact_time
@@ -172,8 +174,11 @@ for plot_no = 111:300
             read_interface_points(filename, true);
         
         % Adjusts the z components to reflect the varying plate heights
-        start_points(:, 2) = start_points(:, 2) - plate_heights(k);
-        end_points(:, 2) = end_points(:, 2) - plate_heights(k);
+%         start_points(:, 2) = start_points(:, 2) - (1 - plate_vel * t);
+%         end_points(:, 2) = end_points(:, 2) - (1 - plate_vel * t);
+        start_points(:, 2) = start_points(:, 2) - 0.5;
+        end_points(:, 2) = end_points(:, 2) - 0.5;
+        min(end_points(:, 2))
         
         % Finds the indexes of points which are in the limits
         keep_points = (start_points(:, 1) > x_limits(1)) ...

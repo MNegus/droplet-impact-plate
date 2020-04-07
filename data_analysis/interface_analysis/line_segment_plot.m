@@ -17,14 +17,18 @@ function line_segment_plot(start_points, end_points, include_points, ...
 %   y_limits = The y limits of the plot
 %   figure_no = The number to assign the figure
     
-    % If figure_no is passed in, then the figure is given that specific
-    % number. Otherwise it is created without a number
-%     if exist('figure_no', 'var')
-%         figure(figure_no);
-%     else
-%         figure;
-%     end
-%     
+% If figure_no is passed in, then the figure is given that specific
+% number. Otherwise it is created without a number
+    if exist('figure_no', 'var')
+        figure(figure_no);
+    else
+        figure(1);
+    end
+    
+    if ~exist('line_name', 'var')
+        line_name = "Interface";
+    end
+    
     % Plots the individual line segments
     if exist('color', 'var')
         first = plot(...
