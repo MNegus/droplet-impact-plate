@@ -33,7 +33,7 @@ sed -n '/^t = /p' ${RAW_DATA_DIR}/log > ${CLEANED_DATA_DIR}/volumes.txt
 
 # Removes all characters apart from numbers, commas and full stops. Therefore 
 # first column is t, the second is volume
-sed -i 's/[^0-9,\.]//g' ${CLEANED_DATA_DIR}/volumes.txt
+sed -i 's/[^0-9,\.e-]//g' ${CLEANED_DATA_DIR}/volumes.txt
 
 echo Cleaned volumes file
 
