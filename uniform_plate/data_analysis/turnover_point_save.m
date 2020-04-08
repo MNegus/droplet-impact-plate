@@ -10,7 +10,7 @@ addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 % conduct the analysis
 
 % Master directory where all the data is stored
-master_directory = '/mnt/newarre/level_11';
+master_directory = '/mnt/newarre/level_13';
 
 % Analysis directory to save the resulting file to
 save_directory = sprintf('%s/data_analysis', master_directory);
@@ -81,10 +81,10 @@ for analyse_no = 1 : length(interface_range)
     output_matrix(analyse_no, 3) = turnover_z;
     
     % Plot (optional for testing)
-    figure(1);
-    ys = all_points_fcn(xs);
-    title(sprintf("t = %g\n", t));
-    plot(xs, ys, turnover_z, turnover_r, 'r*');
+%     figure(1);
+%     ys = all_points_fcn(xs);
+%     title(sprintf("t = %g\n", t));
+%     plot(xs, ys, turnover_z, turnover_r, 'r*');
 end
 writematrix(output_matrix, ...
     sprintf('%s/turnover_points.txt', save_directory));

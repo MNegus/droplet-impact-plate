@@ -6,40 +6,42 @@
 
 close all;
 
+% Adds the interface analysis to path
+addpath("~/repos/plate-impact/data_analysis/interface_analysis");
+
 %% Definitions
 % Here we specify the location of the data and other parameters required to
 % conduct the analysis
 
-% Adds the interface analysis to path
-addpath("~/repos/plate-impact/data_analysis/interface_analysis");
-
-% Name of run
-run_name = "Level 12";
-
-% Master directory where all the data is stored
-master_directory = '/mnt/newarre/level_12';
-
-% Directory to store the outputs of the data analysis
-analysis_directory = sprintf("%s/data_analysis", master_directory);
-
-% Names of the individual directories where the data is stored
+% Velocity of the plate
 plate_velocity = -0.1;
-% if plate_velocity < 0.1
-%     data_directory = sprintf("%s/plate_vel_%.2f", master_directory, plate_velocity)
-% else
-%     data_directory = sprintf("%s/plate_vel_%.1f", master_directory, plate_velocity)
-% end
-cleaned_data_directory = sprintf("%s/cleaned_data", master_directory);
+
+% Time between plate outputs
+plate_output_timestep = 1e-3;
+
+% Parent directory where all the data is stored
+parent_directory = '/mnt/newarre';
+
+% Directory names inside the master directory
+dir_names = ["level_11", "level_12", "level_13"];
+
+% Directory to the graphs and videos 
+analysis_directory = sprintf('%s/combined_analysis', parent_directory);
+
+% Adds the parent directory to the start of 
+for k = 1 : length(dir_names)
+    dir_names(k) = sprintf('%s/%s', parent_directory, dir_names(k));
+end
 
 % Readable names to label the plots for each of the data directories
-legend_entry = sprintf("Plate velocity = %.2f", plate_velocity);
+legend_entries = ["Level 11", "Level 12", "Level 13"];
 
 %% Force on plate
 % Plots the force on the plate as read from the cleaned log file
-log_matrix = dlmread(sprintf('%s/volumes.txt', cleaned_data_directory));
-ts = log_matrix(:, 1);
-Fs = log_matrix(:, 3);
-plot(ts, Fs);
+% log_matrix = dlmread(sprintf('%s/volumes.txt', cleaned_data_directory));
+% ts = log_matrix(:, 1);
+% Fs = log_matrix(:, 3);
+% plot(ts, Fs);
 
 %% Pressure along plate
 % Creates an animation of the pressure along the plate in time.This data is 
@@ -51,161 +53,167 @@ plot(ts, Fs);
 % Stationary plate turnover point
 d = @(t) sqrt(3 * t);
 
-% Impact time
-impact_time = (2.125 - 1 - 1) / (1 + plate_velocity);
+% Set true to adjust the Wagner impact time
+adjusted = true;
 
-% Measured turnover point
-comp_turnover_pts = dlmread(sprintf('%s/turnover_points.txt', analysis_directory));
+% Impact time
+if adjusted
+    impact_time = 0.142;
+else
+    impact_time = (2.125 - 1 - 1) / (1 + plate_velocity);
+end
 
 % Reads the "times.txt" file from the first data directory. In theory this
 % should be identical in all the cases
-times = dlmread(strcat(cleaned_data_directory, '/plate_outputs/times.txt'));
+times = dlmread(sprintf('%s/cleaned_data/plate_outputs/times.txt', dir_names(1)));
 
 % Position to start video at
-start_pos =  floor(0.9 * impact_time * 1000)
+start_pos =  floor(0.9 * impact_time / plate_output_timestep);
 
-no_frames = 100; % Number of video frames
+% Number of video frames
+no_frames = 100; 
 
 % Maximum pressure at each timestep
-pmax = zeros(no_frames, 3);
+pmax = zeros(no_frames, length(dir_names) + 2);
 
-% Turn to false to not show graph
-show_graph = true;
+% Sets up figure
+figure(2);
+hold on;
+grid on;
+xlabel("$r$", "Interpreter", "latex", 'Fontsize',30);
+ylabel("Pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
+ax = gca;
+ax.FontSize = 16;
+set(gca,'TickLabelInterpreter','latex');
+x_limits = [0, 1];
+xlim(x_limits);
+ylim([0 15]);
+
+% Creates animated line for the Wagner pressure
+wagner_line = animatedline('Color', [0    0.4470    0.7410], 'Linestyle', '--');
+
+% Creates animated lines for the numerical results
+line1 = animatedline('Color', [0.8500    0.3250    0.0980]);
+line2 = animatedline('Color', [0.9290    0.6940    0.1250]);
+line3 = animatedline('Color', [0.4940    0.1840    0.5560]);
+animlines = [line1, line2, line3];
 
 
-if show_graph == true 
-    % Sets up figure
-    close(figure(2));
-    figure(2);
-    
-    % Vertical lines
-    comp_turnover_line = xline(0);
-    wagner_turnover_line = xline(0);
-    
-    hold on;
-    grid on;
-    xlabel("$r$", "Interpreter", "latex", 'Fontsize',30);
-    ylabel("Pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
-    ax = gca;
-    ax.FontSize = 16;
-    set(gca,'TickLabelInterpreter','latex');
-    x_limits = [0, 1];
-    xlim(x_limits);
-    ylim([0 15]);
+% Sets up the legend
+L = legend(['Wagner pressure', legend_entries]);
+set(L, 'Interpreter', 'latex');
+set(L, 'FontSize', 15);
 
-    % Create animated lines and place them in a matrix
-    animline = animatedline('Color', [0    0.4470    0.7410]);
+% Sets pixel size of the figure
+width=800;
+height=800;
+set(gcf,'position',[10,10,width,height])
 
-    wagner_line = animatedline('Color', [0.8500    0.3250    0.0980]);
-
-     % Sets up the legend
-    L = legend([legend_entry, 'Wagner pressure', 'Wagner turnover', 'Computational turnover']);
-    set(L, 'Interpreter', 'latex');
-    set(L, 'FontSize', 15);
-
-    width=800;
-    height=800;
-    set(gcf,'position',[10,10,width,height])
-    % create the video writer with 1 fps
-    writerObj = VideoWriter(sprintf('%s/Videos/pressure_vel_%.2f.avi', analysis_directory, plate_velocity));
-    writerObj.FrameRate = 5;
-    open(writerObj);
+% Create the video writer with 5 fps
+if adjusted
+    writerObj = VideoWriter(sprintf('%s/Videos/pressure_adjusted.avi', analysis_directory));
+else
+    writerObj = VideoWriter(sprintf('%s/Videos/pressure_unadjusted.avi', analysis_directory));
 end
+writerObj.FrameRate = 5;
+open(writerObj);
+
 
 % Iterates over time
 for m = start_pos: start_pos + no_frames
-    % Choses which data directories to show
 
     t = 0.001 * m; % Time
 
-    % Loads in data from the text file
-    output_matrix = dlmread(strcat(cleaned_data_directory, ...
-        '/plate_outputs/output_', num2str(m), '.txt'));
-
-    % Sorts in increasing order of r
-    [~, sorted_idxs] = sort(output_matrix(:, 1));
-    sorted_mat = output_matrix(sorted_idxs, :);
-
-    % Saves values of r and pressure
-    rs = sorted_mat(:, 1);
-    ps = sorted_mat(:, 3);
-
-    % Creates the animated line
-    if show_graph == true
-        % Adds the pressure line
-        clearpoints(animline)
-        addpoints(animline, rs, ps);
+    for k = 1 : length(dir_names)
+        % Loads in data from the text file
+        output_matrix = ...
+            dlmread(sprintf('%s/cleaned_data/plate_outputs/output_%d.txt', ...
+                dir_names(k), m));
         
-        % Adds the turnover point line
-        delete(comp_turnover_line);
-        comp_turnover_line = xline(comp_turnover_pts(m, 2), '--b');
+        % Sorts in increasing order of r
+        [~, sorted_idxs] = sort(output_matrix(:, 1));
+        sorted_mat = output_matrix(sorted_idxs, :);
+
+        % Saves values of r and pressure
+        rs = sorted_mat(:, 1);
+        ps = sorted_mat(:, 3);
+
+        % Creates the animated line
+
+        % Adds the pressure line
+        clearpoints(animlines(k))
+        addpoints(animlines(k), rs, ps);
+
+
+        % Saves max value of pressure
+        pmax(m - start_pos + 1, 1) = t; % Time
+        pmax(m - start_pos + 1, 1 + k) = max(ps); % Computational pressure
     end
-
-    % Saves max value of pressure
-    pmax(m - start_pos + 1, 1) = t; % Time
-    pmax(m - start_pos + 1, 2) = max(ps); % Computational pressure
-
     % Wagner line
-    if show_graph == true
-        if t > impact_time
-            sigmas =  10.^linspace(-10, 5, 1e4);
-            [wagner_rs, wagner_ps, wagner_pmax] = wagner_pressure(sigmas, t - impact_time, plate_velocity, 1);
+    if t > impact_time
+        sigmas =  10.^linspace(-10, 5, 1e4);
+        [wagner_rs, wagner_ps, wagner_pmax] = wagner_pressure(sigmas, t - impact_time, plate_velocity, 1);
 
-            clearpoints(wagner_line);
-            addpoints(wagner_line, wagner_rs, wagner_ps);
+        clearpoints(wagner_line);
+        addpoints(wagner_line, wagner_rs, wagner_ps);
 
-            % Draws a vertical line where the turnover point is
-            delete(wagner_turnover_line);
-            wagner_turnover_line = xline(sqrt(3 * (t - impact_time) * (1 - plate_velocity)), '--r' );
-            L = legend([legend_entry, 'Wagner pressure', 'Wagner turnover', 'Computational turnover']);
-            
-            % Records maximum Wagner pressure
-            [pmax(m - start_pos + 1, 3), idx] = max(wagner_ps);
-            wagner_rs(idx)
-        end
+        % Draws a vertical line where the turnover point is
+%         delete(wagner_turnover_line);
+%         wagner_turnover_line = xline(sqrt(3 * (t - impact_time) * (1 - plate_velocity)), '--r' );
+%         L = legend([legend_entry, 'Wagner pressure', 'Wagner turnover', 'Computational turnover']);
+
+        % Records maximum Wagner pressure
+        [pmax(m - start_pos + 1, length(dir_names) + 2), idx] = max(wagner_ps);
+        wagner_rs(idx)
     end
 
-    if show_graph == true
-        ylim([0 , 20]);
-        xlim([0, max([1, 1.5 * d(t - impact_time)])]);
+    % Resets axes limits
+%     ylim([0 , 20]);
+%     xlim([0, max([1, 1.5 * d(t - impact_time)])]);
 
-        title(sprintf("%s, $t$ = %.3f, Plate vel = %g, Wagner impact = %.3f\n",...
-            run_name, times(m, 2), plate_velocity, impact_time), ...
-            "Interpreter", "latex", 'Fontsize', 15);
-        drawnow;
-        frame = getframe(gcf);
-        writeVideo(writerObj, frame);
-    end
+    title(sprintf("Combined pressures, $t$ = %.3f, Plate vel = %g, Wagner impact, $t$ = %.3f\n",...
+        times(m, 2), plate_velocity, impact_time), ...
+        "Interpreter", "latex", 'Fontsize', 15);
+    drawnow;
+    frame = getframe(gcf);
+    writeVideo(writerObj, frame);
+
 end
-if show_graph == true
-    close(writerObj);
-end
+
+close(writerObj);
+
 
 % Creates plot of maximum pressure
 figure(3);
 hold on;
-plot(pmax(:, 1), pmax(:, 2)); % Computational pressure
-plot(pmax(:, 1), pmax(:, 3)); % Wagner pressure
-ylim([0, max(1.5 * pmax(:, 2))]);
+plot(pmax(:, 1), pmax(:, length(dir_names) + 2), '--'); % Wagner pressure
+for k = 1 : length(dir_names)
+    plot(pmax(:, 1), pmax(:, 1 + k)); % Computational pressure
+end
+
+
+ylim([0, max(1.5 * pmax(:, 1 + length(dir_names)))]);
 grid on;
 xlabel("$t$", "Interpreter", "latex", 'Fontsize',30);
 ylabel("Max pressure, $p$", "Interpreter", "latex", 'Fontsize', 30);
 ax = gca;
 ax.FontSize = 10;
 set(gca,'TickLabelInterpreter','latex');
-title(sprintf("%s. Max pressure for plate velocity = %g", run_name, ...
-    plate_velocity), "Interpreter", "latex", 'Fontsize', 15);
+title(sprintf("Combined max pressure, Wagner impact $t$ = %.3f", ...
+    impact_time), "Interpreter", "latex", 'Fontsize', 15);
 
 % xticks(linspace(min(pmax(:, 1)), max(pmax(:, 1)), 12))
 % xtickformat('%.2f')
-L = legend(["Computational", "Wagner"]);
+L = legend(["Wagner", legend_entries]);
 set(L, 'Interpreter', 'latex');
 set(L, 'FontSize', 11);
 set(L, 'Location', 'northeast');
 
-print(gcf, sprintf('%s/Figures/pmax_vel_%g.png', analysis_directory, plate_velocity),'-dpng','-r300');
-%     close(figure(3));
-
+if adjusted
+    print(gcf, sprintf('%s/Figures/pmax_adjusted.png', analysis_directory),'-dpng','-r300');
+else
+    print(gcf, sprintf('%s/Figures/pmax_unadjusted.png', analysis_directory),'-dpng','-r300');
+end
 
 
 
