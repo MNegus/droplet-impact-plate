@@ -9,7 +9,7 @@
 export OMP_NUM_THREADS=$1
 
 # Deletes the previous directory and test files
-rm -r uniform_plate
+rm -r cantilever
 rm *.s
 rm *.s.d
 rm *.tests 
