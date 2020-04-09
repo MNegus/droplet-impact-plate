@@ -63,6 +63,9 @@ int main() {
         #define FILTERED 1
     }
 
+    /* Changes the Poisson tolerence to what was defined in parameters.h */
+    TOLERANCE = POISSON_TOLERANCE;
+
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
     size(BOX_WIDTH); // Size of the domain
