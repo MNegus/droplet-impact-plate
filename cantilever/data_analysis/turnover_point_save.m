@@ -10,7 +10,7 @@ addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 % conduct the analysis
 
 % Master directory where all the data is stored
-master_directory = '/mnt/newarre/level_13';
+master_directory = '/mnt/newarre/first_cantilever';
 
 % Analysis directory to save the resulting file to
 save_directory = sprintf('%s/data_analysis', master_directory);

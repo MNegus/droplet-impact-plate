@@ -1,8 +1,8 @@
 function [rs, ps, pmax] = wagner_pressure(sigmas, t, plate_vel, eps)
 
 % Cantilever displacement
-s = @(t) -plate_vel * t; 
-sdot = @(t) -plate_vel;
+s = @(t) plate_vel * t; 
+sdot = @(t) plate_vel;
 sddot = @(t) 0;
 
 % Turnover point
