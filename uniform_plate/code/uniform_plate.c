@@ -204,7 +204,7 @@ event small_droplet_removal (i++) {
 
 event output_volume (t += 0.001) {
 /* Outputs the volume of the liquid phase to the log file */
-    fprintf(stderr, "t = %g, volume = %g, force = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
+    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
 }
 
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
