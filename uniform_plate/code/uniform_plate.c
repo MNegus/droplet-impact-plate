@@ -65,6 +65,7 @@ int main() {
 
     /* Changes the Poisson tolerence to what was defined in parameters.h */
     TOLERANCE = POISSON_TOLERANCE;
+    NITERMAX = POISSON_NITERMAX;
 
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
@@ -376,6 +377,7 @@ double force_on_plate() {
                 double avg_mu = ff * (mu1 - mu2) + mu2;
                 // Work out how to take into account variable visosity
                 force += y * y * Delta * (p[1, 0] - 2 * avg_mu * u_x_deriv);
+                // force += y * y * Delta * (p[1, 0]);
         }
     }
     if (found_cell == 0) {
