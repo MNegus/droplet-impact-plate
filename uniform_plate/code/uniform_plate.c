@@ -63,6 +63,10 @@ int main() {
         #define FILTERED 1
     }
 
+    /* Changes the Poisson tolerence to what was defined in parameters.h */
+    TOLERANCE = POISSON_TOLERANCE;
+    NITERMAX = POISSON_NITERMAX;
+
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
     size(BOX_WIDTH); // Size of the domain
@@ -200,7 +204,7 @@ event small_droplet_removal (i++) {
 
 event output_volume (t += 0.001) {
 /* Outputs the volume of the liquid phase to the log file */
-    fprintf(stderr, "t = %g, volume = %g, force = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
+    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
 }
 
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
@@ -373,6 +377,7 @@ double force_on_plate() {
                 double avg_mu = ff * (mu1 - mu2) + mu2;
                 // Work out how to take into account variable visosity
                 force += y * y * Delta * (p[1, 0] - 2 * avg_mu * u_x_deriv);
+                // force += y * y * Delta * (p[1, 0]);
         }
     }
     if (found_cell == 0) {

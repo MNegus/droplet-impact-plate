@@ -26,3 +26,5 @@ const double PLATE_OUTPUT_TIMESTEP = 1e-3; // Time between plate outputs
 const double INTERFACE_OUTPUT_TIMESTEP = 1e-3; // Time between interface outputs
 const double HARD_MAX_TIME = 2.0; // Hard maximum time 
 const int FILTERED = 0; // Set to zero to prevent filtering
+const double POISSON_TOLERANCE = 1e-3; // Tolerance of Poisson solver (default 1e-3)
+const int POISSON_NITERMAX = 100; // Max number of iterations for Poisson solver (default 100)
