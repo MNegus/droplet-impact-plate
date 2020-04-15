@@ -14,7 +14,7 @@ addpath("~/repos/plate-impact/data_analysis/interface_analysis");
 % conduct the analysis
 
 % Velocity of the plate
-plate_velocity = -0.1;
+plate_velocity = 0;
 
 % Time between plate outputs
 plate_output_timestep = 1e-3;
@@ -23,25 +23,19 @@ plate_output_timestep = 1e-3;
 parent_directory = '/mnt/newarre';
 
 % Directory names inside the master directory
-dir_names = ["level_11", "level_12", "level_13"];
-
-% Directory to the graphs and videos 
-analysis_directory = sprintf('%s/combined_analysis', parent_directory);
+dir_names = ["force_test"];
 
 % Adds the parent directory to the start of 
 for k = 1 : length(dir_names)
     dir_names(k) = sprintf('%s/%s', parent_directory, dir_names(k));
 end
 
-% Readable names to label the plots for each of the data directories
-legend_entries = ["Level 11", "Level 12", "Level 13"];
+% Directory to the graphs and videos 
+analysis_directory = sprintf('%s/data_analysis', dir_names(1));
 
-%% Force on plate
-% Plots the force on the plate as read from the cleaned log file
-% log_matrix = dlmread(sprintf('%s/volumes.txt', cleaned_data_directory));
-% ts = log_matrix(:, 1);
-% Fs = log_matrix(:, 3);
-% plot(ts, Fs);
+% Readable names to label the plots for each of the data directories
+legend_entries = ["Level 12"];
+
 
 %% Pressure along plate
 % Creates an animation of the pressure along the plate in time.This data is 
@@ -54,7 +48,7 @@ legend_entries = ["Level 11", "Level 12", "Level 13"];
 d = @(t) sqrt(3 * t);
 
 % Set true to adjust the Wagner impact time
-adjusted = true;
+adjusted = false;
 
 % Impact time
 if adjusted
@@ -70,11 +64,15 @@ times = dlmread(sprintf('%s/cleaned_data/plate_outputs/times.txt', dir_names(1))
 % Position to start video at
 start_pos =  floor(0.9 * impact_time / plate_output_timestep);
 
+
 % Number of video frames
 no_frames = 100; 
 
 % Maximum pressure at each timestep
 pmax = zeros(no_frames, length(dir_names) + 2);
+
+% Force at each timestep
+integrated_force = zeros(no_frames, length(dir_names) + 1);
 
 % Sets up figure
 figure(2);
@@ -120,9 +118,9 @@ open(writerObj);
 
 
 % Iterates over time
-for m = start_pos: start_pos + no_frames
+for m = start_pos: start_pos + no_frames -1
 
-    t = 0.001 * m; % Time
+    t = times(m, 2); % Time
 
     for k = 1 : length(dir_names)
         % Loads in data from the text file
@@ -148,6 +146,10 @@ for m = start_pos: start_pos + no_frames
         % Saves max value of pressure
         pmax(m - start_pos + 1, 1) = t; % Time
         pmax(m - start_pos + 1, 1 + k) = max(ps); % Computational pressure
+        
+        % Calculates the force using trapezoidal rule
+        integrated_force(m - start_pos + 1, 1) = t;
+        integrated_force(m - start_pos + 1, 1 + k) = trapz(rs, 2 * pi * rs .* ps);
     end
     % Wagner line
     if t > impact_time
@@ -171,7 +173,7 @@ for m = start_pos: start_pos + no_frames
 %     ylim([0 , 20]);
 %     xlim([0, max([1, 1.5 * d(t - impact_time)])]);
 
-    title(sprintf("Combined pressures, $t$ = %.3f, Plate vel = %g, Wagner impact, $t$ = %.3f\n",...
+    title(sprintf("Combined pressures, $t$ = %.4f, Plate vel = %g, Wagner impact, $t$ = %.4f\n",...
         times(m, 2), plate_velocity, impact_time), ...
         "Interpreter", "latex", 'Fontsize', 15);
     drawnow;
@@ -217,9 +219,17 @@ end
 
 
 
+%% Force on plate
+% Plots the force on the plate as read from the cleaned log file
+log_matrix = dlmread(sprintf('%s/cleaned_data/volumes.txt', dir_names(1)));
+ts = log_matrix(:, 1);
+Fs = log_matrix(:, 3);
 
-
-
+% Plot of force
+figure(4);
+hold on
+plot(integrated_force(:, 1), integrated_force(:, 2));
+plot(ts, Fs);
 
 %%
 %
