@@ -44,6 +44,8 @@ p[top] = dirichlet(0.); // 0 pressure far from surface
 u.n[left] = dirichlet(0.); // No flow through surface
 u.t[left] = dirichlet(0.); // No slip at surface
 
+/* Function declarations */
+double force_on_plate(); // Calculates the force on the plate via integration
 
 int main() {
 
@@ -127,7 +129,7 @@ event small_droplet_removal (i++) {
 
 event output_volume (t += 0.001) {
 /* Outputs the volume of the liquid phase to the log file */
-    fprintf(stderr, "t = %g, volume = %g\n", t, 2 * pi * statsf(f).sum);
+    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
 }
 
 
@@ -222,3 +224,16 @@ event end (t = MAX_TIME) {
     fprintf(stderr, "Finished after %g seconds\n", end_wall_time - start_wall_time);
 }
 
+double force_on_plate() {
+/* Calculates the force that the fluid is exerting on the top of the plate */
+    double force = 0; // Initialse force to be zero
+
+    foreach_boundary(left) {
+        if (y < PLATE_WIDTH) {
+                force += y * MIN_CELL_SIZE * (p[1, 0]);
+        }
+    }
+
+    force = 2 * pi * force;
+    return force;
+}
