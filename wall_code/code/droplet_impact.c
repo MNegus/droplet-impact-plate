@@ -44,9 +44,6 @@ p[top] = dirichlet(0.); // 0 pressure far from surface
 u.n[left] = dirichlet(0.); // No flow through surface
 u.t[left] = dirichlet(0.); // No slip at surface
 
-/* Function declarations */
-double force_on_plate(); // Calculates the force on the plate via integration
-
 int main() {
 
     /* Create the computational domain */
@@ -126,10 +123,25 @@ event small_droplet_removal (i++) {
     remove_droplets(f, 5, 1e-4, true); 
 }
 
+event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
+/* Outputs the stats about the flow to the log file */
+    
+    /* Force calculation */
+    double force = 0.; // Initialises the force variable
 
-event output_volume (t += 0.001) {
-/* Outputs the volume of the liquid phase to the log file */
-    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
+    // Loops over the left hand boundary (the interface)
+    foreach_boundary(left, reduction(+:force)) {
+        // Only looks at cells along the plate
+        if (y < PLATE_WIDTH) {
+                // Increments the force using the trapezoidal rule
+                force += y * Delta * p[1, 0];
+        }
+    }
+
+    force = 2 * pi * force; // Integrates about the angular part
+
+    /* Outputs to log file */
+    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force);
 }
 
 
@@ -153,24 +165,24 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
 /* Outputs the values of pressure along the plate */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    // Creates the file for outputting data
-    char plate_output_filename[80];
-    sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
-    FILE *plate_output_file = fopen(plate_output_filename, "w");
+        // Creates the file for outputting data
+        char plate_output_filename[80];
+        sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
+        FILE *plate_output_file = fopen(plate_output_filename, "w");
 
-    // Adds the time to the first line of the file
-    fprintf(plate_output_file, "t = %g\n", t);
+        // Adds the time to the first line of the file
+        fprintf(plate_output_file, "t = %g\n", t);
 
-    foreach_boundary(left) {
-        if (y < PLATE_WIDTH) {
-            fprintf(plate_output_file, \
-            "y = %g, x = %g, p = %g\n", y, x, p[1, 0]);
+        foreach_boundary(left) {
+            if (y < PLATE_WIDTH) {
+                fprintf(plate_output_file, \
+                "y = %g, x = %g, p = %g\n", y, x, p[1, 0]);
+            }
         }
-    }
 
-    fclose(plate_output_file);
+        fclose(plate_output_file);
 
-    plate_output_no++; // Increments output number
+        plate_output_no++; // Increments output number
     }
 }
 
@@ -224,16 +236,3 @@ event end (t = MAX_TIME) {
     fprintf(stderr, "Finished after %g seconds\n", end_wall_time - start_wall_time);
 }
 
-double force_on_plate() {
-/* Calculates the force that the fluid is exerting on the top of the plate */
-    double force = 0; // Initialse force to be zero
-
-    foreach_boundary(left) {
-        if (y < PLATE_WIDTH) {
-                force += y * MIN_CELL_SIZE * (p[1, 0]);
-        }
-    }
-
-    force = 2 * pi * force;
-    return force;
-}
