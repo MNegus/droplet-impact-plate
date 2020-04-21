@@ -163,7 +163,7 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 
 
 event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
-/* Outputs the values of pressure along the plate */
+/* Outputs the values of pressure and viscous stress along the plate */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         // Creates the file for outputting data
         char plate_output_filename[80];
@@ -175,8 +175,19 @@ event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
 
         foreach_boundary(left) {
             if (y < PLATE_WIDTH) {
+                /* Calculates the viscous stress term in the cell above the 
+                plate */
+                // Viscosity using volume averaging
+                double avg_mu = f[1, 0] * (mu1 - mu2) + mu2; 
+
+                // Derivative of vertical velocity in vertical direction
+                double u_x_deriv = (u.x[2, 0] - u.x[1, 0]) / Delta;
+
+                double viscous_stress = - 2 * avg_mu * u_x_deriv;
+
                 fprintf(plate_output_file, \
-                "y = %g, x = %g, p = %g\n", y, x, p[1, 0]);
+                "y = %g, x = %g, p = %g, v_strss = %g\n",\
+                 y, x, p[1, 0], viscous_stress);
             }
         }
 
