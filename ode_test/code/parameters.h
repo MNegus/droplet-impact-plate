@@ -1,14 +1,15 @@
 /* parameters.h
 Header file for the ODE test to feed in relevant parameters */
 
-const double Delta = 1e-4; // Timestep
-const double MAX_TIME = 10.; // Maximum time to run the ODE for
-const double ALPHA = 1.; // Mass term
-const double BETA = 1.; // Damping term
-const double GAMMA = 1.; // Elastic term
+/* Computational parameters */
+const double dt0 = 1e-1; // First timestep
+const double MAX_TIME = 5.; // Maximum time to run the ODE for
 
-// Sinusoidal forcing terms
-// const double nu = 0.1;
-// const double F0 = 1.;
-// const double omega0 = 1.;
-// const double omega = 1.1;
+/* Oscillation parameters:
+Parameters such that the ODE is:
+s''(t) + 2 nu s'(t) + omega0^2 s(t) = omega0^2 q,
+hence in terms of the solver, ALPHA = 1, BETA = 2 * nu, GAMMA = omega0^2 and 
+F(t) = omega0^2 * q */
+const double nu = 1.; // Damping term
+const double omega0 = 10.; // Elastic term
+const double q = 1.; // Forcing term

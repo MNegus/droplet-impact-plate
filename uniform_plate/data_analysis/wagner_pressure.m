@@ -1,4 +1,4 @@
-function [rs, ps, pmax] = wagner_pressure(sigmas, t, plate_vel, eps)
+function [rs, ps, outer_ps, pmax] = wagner_pressure(sigmas, t, plate_vel, eps)
 
 % Cantilever displacement
 s = @(t) -plate_vel * t; 
@@ -34,6 +34,7 @@ pos_idxs = find(all_rs > 0);
 rs = all_rs(pos_idxs);
 sigmas = sigmas(pos_idxs);
 ps = real(inner_p(sigmas, t) + outer_p(rs/eps, t) - overlap(rs, t));
+outer_ps = real(outer_p(rs/eps, t));
 
 %% Maximum pressure
 % Returns the maximum pressure value which is evaluated at r = d
