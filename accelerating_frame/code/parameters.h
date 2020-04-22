@@ -15,9 +15,9 @@ const double PLATE_WIDTH = 3.; // Width of the plate
 
 /* Plate parameters, corresponding to:
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
-const double ALPHA = 0.1; // Mass term
-const double BETA = 0.1; // Damping term
-const double GAMMA = 0.1; // Elastic term
+const double ALPHA = 1; // Mass term
+const double BETA = 1; // Damping term
+const double GAMMA = 1; // Elastic term
 
 /* Computational constants */
 const int MINLEVEL = 4; // Minimum refinement level 
