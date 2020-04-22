@@ -17,7 +17,6 @@
 /* Computational constants derived from parameters */
 double MIN_CELL_SIZE; // Size of the smallest cell
 double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
-double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
 double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
@@ -67,7 +66,7 @@ int main() {
 
     /* Maximum time is shortly after Wagner theory would predict the turnover 
     point reaches the radius of the droplet */
-    double wagner_max_time = 1.5 * (IMPACT_TIME + 1. / 3.);
+    double wagner_max_time = 2.0 * (IMPACT_TIME + 1. / 3.);
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
     run(); // Runs the simulation
 }
@@ -126,7 +125,7 @@ event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
 
             /* Plate output */
             fprintf(plate_output_file, "y = %g, p = %g, strss = %g\n",\
-                 y, p[1, 0], viscouss_stress);
+                 y, p[1, 0], viscous_stress);
         }
 
         // Close plate output file
@@ -137,8 +136,8 @@ event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
         force = 2 * pi * force; 
 
         /* Outputs to force and volume to log file */
-        fprintf(stderr, "t = %g, v = %g, F = %g\n", \
-            t, 2 * pi * statsf(f).sum, force);
+        fprintf(stderr, "t = %g, v = %g, F = %g, s = %g, d2s_dt2 = %g\n", \
+            t, 2 * pi * statsf(f).sum, force, s_current, d2s_dt2);
     }
 }
 
@@ -271,6 +270,9 @@ event moving_plate (i++) {
     // Updates current and previous values of s
     s_previous = s_current;
     s_current = s_next; 
+
+    // Redefine boundary conditions for u
+    boundary ((scalar *){u}); 
 }
 
 
