@@ -52,6 +52,8 @@ xlabel("$\Delta t$", "Interpreter", "latex", 'Fontsize', 15);
 ylabel("Error", "Interpreter", "latex", 'Fontsize', 15);
 title("Convergence of numerical scheme for ODE", "Interpreter", "latex", 'Fontsize', 15);
 set(gca,'TickLabelInterpreter', 'latex', 'Fontsize', 13);
+print(gcf, sprintf('%s/convergence.png', analysis_dir), '-dpng','-r300');
+
 
 %% Create animation of solution
 % Creates video object

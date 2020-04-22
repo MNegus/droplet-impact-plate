@@ -23,26 +23,44 @@ plate_output_timestep = 1e-3;
 parent_directory = '/mnt/newarre';
 
 % Directory names inside the master directory
-dir_names = ["stress_test"];
+dir_names = ["large_alpha"];
 
 % Adds the parent directory to the start of 
 for k = 1 : length(dir_names)
-    dir_names(k) = sprintf('%s/%s', parent_directory, dir_names(k));
+    dir_names(k) = sprintf('%s/%s', parent_directory, dir_names(k))
 end
 
-% Directory to the graphs and videos 
-analysis_directory = sprintf('%s/stationary_comparison', parent_directory);
+% % Directory to the graphs and videos 
+analysis_directory = sprintf('%s/data_analysis', dir_names(1));
+
 
 
 % Readable names to label the plots for each of the data directories
-legend_entries = ["Stress test"];
+legend_entries = ["alpha = 100, beta = gamma = 0"];
 
-%% Force on plate
-% Plots the force on the plate as read from the cleaned log file
-% log_matrix = dlmread(sprintf('%s/volumes.txt', cleaned_data_directory));
-% ts = log_matrix(:, 1);
-% Fs = log_matrix(:, 3);
-% plot(ts, Fs);
+%% Value of s(t)
+alpha = 100;
+figure(10);
+hold on;
+% Directory of cleaned data
+cleaned_data_directory = sprintf('%s/cleaned_data', dir_names(1));
+
+% Matrix of output
+log_matrix = dlmread(sprintf('%s/volumes.txt', cleaned_data_directory));
+ts = log_matrix(:, 1);
+
+% Values of s
+s_vals= log_matrix(:, 4);
+plot(ts, s_vals);
+
+% Analytic solution to s
+ode_fun = @(s) alpha * s - (8 * sqrt(3) / 5) * (ts - s).^(5/2);
+s_analytic = fsolve(ode_fun, zeros(size(ts)));
+plot(ts, s_analytic);
+legend(["Numerical", "Analytic"]);
+xlabel("t");
+ylabel("s(t)");
+
 
 %% Pressure along plate
 % Creates an animation of the pressure along the plate in time.This data is 
@@ -88,7 +106,7 @@ ax.FontSize = 16;
 set(gca,'TickLabelInterpreter','latex');
 x_limits = [0, 1];
 xlim(x_limits);
-% ylim([0 15]);
+ylim([0 15]);
 
 % Creates animated line for the Wagner pressure
 wagner_line = animatedline('Color', [0    0.4470    0.7410], 'Linestyle', '--');
@@ -139,14 +157,14 @@ for m = start_pos: start_pos + no_frames
         % Saves values of r and pressure
         rs = sorted_mat(:, 1);
         ps = sorted_mat(:, 3);
-        stress = sorted_mat(:, 4);
+%         stress = sorted_mat(:, 4);
 
         % Creates the animated line
 
         % Adds the pressure line
         clearpoints(animlines(k))
-%         addpoints(animlines(k), rs, ps);
-        addpoints(animlines(k), rs, stress);
+        addpoints(animlines(k), rs, ps);
+%         addpoints(animlines(k), rs, stress);
 
 
         % Saves max value of pressure
@@ -158,8 +176,8 @@ for m = start_pos: start_pos + no_frames
         sigmas =  10.^linspace(-10, 5, 1e4);
         [wagner_rs, wagner_ps, wagner_pmax] = wagner_pressure(sigmas, t - impact_time, plate_velocity, 1);
 % 
-%         clearpoints(wagner_line);
-%         addpoints(wagner_line, wagner_rs, wagner_ps);
+        clearpoints(wagner_line);
+        addpoints(wagner_line, wagner_rs, wagner_ps);
 
         % Draws a vertical line where the turnover point is
 %         delete(wagner_turnover_line);
