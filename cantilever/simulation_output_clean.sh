@@ -31,11 +31,19 @@ mkdir ${CLEANED_DATA_DIR}/plate_outputs
 # all other lines
 sed -n '/^t = /p' ${RAW_DATA_DIR}/log > ${CLEANED_DATA_DIR}/volumes.txt
 
-# Removes all characters apart from numbers, commas and full stops. Therefore 
-# first column is t, the second is volume
-sed -i 's/[^0-9,\.e-]//g' ${CLEANED_DATA_DIR}/volumes.txt
+# # Removes all characters apart from numbers, commas and full stops. Therefore 
+# # first column is t, the second is volume
+# sed -i 's/[^0-9,\.e-]//g' ${CLEANED_DATA_DIR}/volumes.txt
 
-echo Cleaned volumes file
+# Removes readable qualifies
+sed -e "s/ds_dt = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+sed -e "s/d2s_dt2 = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+sed -e "s/t = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+sed -e "s/v = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+sed -e "s/F = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+sed -e "s/s = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+
+echo Cleaned log file
 
 
 ################################################################################
