@@ -210,36 +210,36 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 }
 
 
-// event images (t += 0.01; t <= 2.) {
-// /* Produces movies and images using bview */
+event images (t += 0.01; t <= MAX_TIME) {
+/* Produces movies and images using bview */
 
-//     // Voriticty calculation
-//     scalar omega[];
-//     vorticity (u, omega);
+    // Voriticty calculation
+    scalar omega[];
+    vorticity (u, omega);
 
-//     // Set up bview box
-//     view (width = 512, height = 512, fov = 20, ty = -0.5, quat = {0, 0, -0.707, 0.707});
+    // Set up bview box
+    view (width = 512, height = 512, fov = 20, ty = -0.5, quat = {0, 0, -0.707, 0.707});
 
-//     // Movie of the volume fraction of the droplet
-//     clear();
-//     draw_vof("f", lw = 2);
-//     squares("f", linear = true);
-//     mirror ({0,1}) {
-//         draw_vof("f", lw = 2);
-//         squares("f", linear = true);
-//     }
-//     save ("tracer.mp4");
+    // Movie of the volume fraction of the droplet
+    clear();
+    draw_vof("f", lw = 2);
+    squares("f", linear = true);
+    mirror ({0,1}) {
+        draw_vof("f", lw = 2);
+        squares("f", linear = true);
+    }
+    save ("tracer.mp4");
 
-//     // Movie of the vorticity
-//     clear();
-//     squares("omega", linear = true);
-//     draw_vof("f", lw = 2);
-//     mirror ({0,1}) {
-//         draw_vof("f", lw = 2);
-//         squares("omega", linear = true);
-//     }
-//     save ("vort.mp4");
-// }
+    // Movie of the vorticity
+    clear();
+    squares("omega", linear = true);
+    draw_vof("f", lw = 2);
+    mirror ({0,1}) {
+        draw_vof("f", lw = 2);
+        squares("omega", linear = true);
+    }
+    save ("vort.mp4");
+}
 
 
 event end (t = MAX_TIME) {
