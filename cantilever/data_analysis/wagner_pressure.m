@@ -1,32 +1,27 @@
-function [rs, ps, pmax] = wagner_pressure(sigmas, t, plate_vel, eps)
-
-% Cantilever displacement
-s = @(t) plate_vel * t; 
-sdot = @(t) plate_vel;
-sddot = @(t) 0;
+function [rs, ps, pmax] = wagner_pressure(sigmas, t, s, sdot, sddot, eps)
 
 % Turnover point
-d = @(t) sqrt(3 * (t - s(t)));
-ddot = @(t) (sqrt(3)/2) * (1 - sdot(t)) ./ sqrt(t - s(t));
-dddot = @(t) - (sqrt(3)/4) * ((1 - sdot(t)).^2 + 2 * (t - s(t)) .* sddot(t))...
-    ./ (t - s(t)).^(3/2);
+d = sqrt(3 * (t - s));
+ddot = (sqrt(3)/2) * (1 - sdot) ./ sqrt(t - s);
+dddot = - (sqrt(3)/4) * ((1 - sdot).^2 + 2 * (t - s) .* sddot)...
+    ./ (t - s).^(3/2);
 
 % Jet thickness
-J = @(t) 2 * (t - s(t)).^(3/2) / (sqrt(3) * pi);
+J = 2 * (t - s).^(3/2) / (sqrt(3) * pi);
 
 %% Outer solution
 outer_p = @(rhat, t) (1/eps) ...
-    * (4 * (2 * d(t)^2 - rhat.^2) * ddot(t)^2 ./ (3 * pi * sqrt(d(t)^2 - rhat.^2)) ...
-    + 4 * d(t) * dddot(t) * sqrt(d(t)^2 - rhat.^2) / (3 * pi));
+    * (4 * (2 * d^2 - rhat.^2) * ddot^2 ./ (3 * pi * sqrt(d^2 - rhat.^2)) ...
+    + 4 * d * dddot * sqrt(d^2 - rhat.^2) / (3 * pi));
 
 %% Inner solution
-tilde_r = @(sigma, t) - (J(t)/pi) * (sigma + 4 * sqrt(sigma) + log(sigma) + 1);
-inner_r = @(sigma, t) eps * d(t) + eps^3 * tilde_r(sigma, t);
-inner_p = @(sigma, t) (1 / eps^2) * 2 * ddot(t)^2 * sqrt(sigma) ./ (1 + sqrt(sigma)).^2;
+tilde_r = @(sigma, t) - (J/pi) * (sigma + 4 * sqrt(sigma) + log(sigma) + 1);
+inner_r = @(sigma, t) eps * d + eps^3 * tilde_r(sigma, t);
+inner_p = @(sigma, t) (1 / eps^2) * 2 * ddot^2 * sqrt(sigma) ./ (1 + sqrt(sigma)).^2;
 
 %% Overlap solution
-overlap = @(r, t) 2 * sqrt(2) * d(t)^(3/2) * ddot(t)^2 ...
-    ./ (3 * pi * eps^2 * sqrt(d(t) / eps^2 - r / eps^3));
+overlap = @(r, t) 2 * sqrt(2) * d^(3/2) * ddot^2 ...
+    ./ (3 * pi * eps^2 * sqrt(d / eps^2 - r / eps^3));
 
 %% Composite solution
 all_rs = inner_r(sigmas, t);
