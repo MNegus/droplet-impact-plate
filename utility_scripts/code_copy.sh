@@ -17,3 +17,6 @@ mkdir ${DEST_DIR}/${SUB_DIR_NAME}
 
 # Copies the code directory over to the destination
 cp -r ${LOCAL_DIR}/code ${DEST_DIR}/${SUB_DIR_NAME}
+
+# Copies the run script over to the destination
+cp run_simulation.sh ${DEST_DIR}/${SUB_DIR_NAME}/code
