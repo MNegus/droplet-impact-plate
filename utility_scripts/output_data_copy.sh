@@ -1,23 +1,25 @@
 #!/bin/bash
 
-#data_copy.sh
+# output_data_copy.sh
 
-# Copies results from the scratch of a compute machine into the office machine's
-# scratch folder
+# Copies output data (and the corresponding parameters file) from a remote
+# machine to a different location (typically a long-term storage location like a
+# hard-drive). Script designed to run from the local machine where the data is 
+# to be copied to, and uses scp to copy from a remote machine
 
-COMPUTE_MACHINE=$1 # Name of compute machine e.g. nocturne, vanisher, ...
-COMPUTE_SCRATCH=$2 # Directory of scratch in compute machine e.g. /scratch/negus
-SUB_DIR_NAME=$3 # Sub-directory where data is stored e.g. plate_vel_0.1 
-OFFICE_SCRATCH=$4 # Directory of scratch in office machine e.g. /scratch/uniform_plate
+REMOTE_MACHINE=$1 # Name of compute machine e.g. nocturne, vanisher, ...
+REMOTE_PARENT_DIR=$2 # Parent directory in compute machine e.g. /scratch
+SUB_DIR_NAME=$3 # Sub-directory where data is stored (i.e. run_name)
+LOCAL_PARENT_DIR=$4 # Parent directory in the local machine
 
-# Full directory name on the compute machine
-compute_dir=${COMPUTE_MACHINE}:${COMPUTE_SCRATCH}/${SUB_DIR_NAME}
+# Full directory name on the remote machine
+remote_dir=${REMOTE_MACHINE}:${REMOTE_PARENT_DIR}/${SUB_DIR_NAME}
 
-# Full directory name on the office machine
-office_dir=${OFFICE_SCRATCH}/${SUB_DIR_NAME}
+# Full directory name on the local machine
+local_dir=${LOCAL_PARENT_DIR}/${SUB_DIR_NAME}
 
 # Makes the directory on the office machine
-mkdir ${office_dir}
+mkdir ${local_dir}
 
 # Secure copies the parameters file and raw data
-scp -r ${compute_dir}/{code/parameters.h,raw_data} ${office_dir}
+scp -r ${remote_dir}/{code/parameters.h,raw_data} ${local_dir}
