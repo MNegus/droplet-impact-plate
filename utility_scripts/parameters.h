@@ -1,22 +1,31 @@
 /* parameters.h
-Header file for the parameters to feed into the simulations for droplet impact*/
+Header file for the parameters to feed into the simulations for droplet impact
+*/
 
-/* Physical constants */
+/* Fluid properties */
 const double RHO_R = 0.003; // Density ratio
 const double MU_R = 0.002; // Viscosity ratio
 const double REYNOLDS = 1000.0; // Reynolds number
 const double WEBER = 10000.0; // Weber number
 const double FR = 10.1; // Froude number
+
+/* Droplet definition */
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
 const double DROP_RADIUS = 1.0; // Radius of droplet
 const double DROP_CENTRE = 1.125; // Initial centre position of droplet
-const double PLATE_REFINED_WIDTH = 0.045; // Width of refined region above plate
-const double PLATE_WIDTH = 3.; // Width of the plate
 
-/* Plate parameters, corresponding to:
+/* Plate definition */
+const double INITIAL_PLATE_TOP = 1.0; // Initial top of plate 
+const double PLATE_WIDTH = 3.0; // Width of plate (horizontal direction)
+const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
+
+/* Prescribed plate parameters (only used when plate velocity is prescribed) */
+const double PLATE_VEL = -0.1; // Velocity of the plate
+
+/* Plate ODE terms (only used when plate is coupled). Corresponds to 
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
-const double ALPHA = 1; // Mass term
-const double BETA = 1; // Damping term
+const double ALPHA = 0.01; // Mass term
+const double BETA = 0; // Damping term
 const double GAMMA = 1; // Elastic term
 
 /* Computational constants */
