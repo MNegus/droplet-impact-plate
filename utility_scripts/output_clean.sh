@@ -1,15 +1,20 @@
 #!/bin/bash
 
-################################################################################
+# output_clean.sh
+
 # This script cleans data outputted from droplet impact simulations. 
-# Specifically, simulations where the volume of the droplet is outputted in time
-# in the log file. Also where there are "plate_output_n.txt" files, which have 
+# Specifically, simulations where quantities are outputted at each timestep in 
+# the log file (such as pressure, force and position of the plate).
+# Also where there are "plate_output_n.txt" files, which have 
 # their first line listing the value of time when they were made, and the rest
-# of the lines in column format giving the values of y, h, p, u_x and u_y along 
-# the plate (e.g. y = ..., h = ..., p = ..., u_x = ...., u_y = ...). It converts
+# of the lines in column format giving the values of quantities such as radial
+# coordinate (y), vertical coordinate (x), pressure (p) and other quantities in
+# the format y = ..., x = ..., p = ..., etc. It converts
 # these plate_output files into CSV style text files in order to make 
 # quantitative analysis easier.
-################################################################################
+# NOTE: For the plate_output files, it assumes the output is in scientific 
+# notation (e.g. 1.083e-7), so the "e" character is not removed. Hence care is
+# needed if there are "e" characters that are not a part of the numerical output
 
 # Parent directory where the raw data is
 PARENT_DIR=$1
@@ -25,23 +30,19 @@ mkdir ${CLEANED_DATA_DIR}
 mkdir ${CLEANED_DATA_DIR}/plate_outputs
 
 ################################################################################
-# Cleans the log file for the volume outputs
+# Cleans the log file 
 ################################################################################
 # We are interested in the lines which start with "t = ", and can remove all 
 # all other lines
-sed -n '/^t = /p' ${RAW_DATA_DIR}/log > ${CLEANED_DATA_DIR}/volumes.txt
-
-# # Removes all characters apart from numbers, commas and full stops. Therefore 
-# # first column is t, the second is volume
-# sed -i 's/[^0-9,\.e-]//g' ${CLEANED_DATA_DIR}/volumes.txt
+sed -n '/^t = /p' ${RAW_DATA_DIR}/log > ${CLEANED_DATA_DIR}/output.txt
 
 # Removes readable qualifies
-sed -e "s/ds_dt = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
-sed -e "s/d2s_dt2 = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
-sed -e "s/t = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
-sed -e "s/v = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
-sed -e "s/F = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
-sed -e "s/s = //g" -i ${CLEANED_DATA_DIR}/volumes.txt
+sed -e "s/ds_dt = //g" -i ${CLEANED_DATA_DIR}/output.txt
+sed -e "s/d2s_dt2 = //g" -i ${CLEANED_DATA_DIR}/output.txt
+sed -e "s/t = //g" -i ${CLEANED_DATA_DIR}/output.txt
+sed -e "s/v = //g" -i ${CLEANED_DATA_DIR}/output.txt
+sed -e "s/F = //g" -i ${CLEANED_DATA_DIR}/output.txt
+sed -e "s/s = //g" -i ${CLEANED_DATA_DIR}/output.txt
 
 echo Cleaned log file
 
