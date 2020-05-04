@@ -26,6 +26,7 @@
 double MIN_CELL_SIZE; // Size of the smallest cell
 double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
 double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
+double DROP_CENTRE; // Initial centre of the droplet
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
 double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
@@ -66,12 +67,6 @@ double force_on_plate (); // Calculates the force on the plate via integration
 int main() {
 /* Main function for running the simulation */
 
-    /* If filtering is set in the parameters file, then define the FILTERED 
-    macro */
-    if (FILTERED) {
-        #define FILTERED 1
-    }
-
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
     size(BOX_WIDTH); // Size of the domain
@@ -93,9 +88,8 @@ int main() {
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
     DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
-    IMPACT_TIME = -(DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
-        / (DROP_VEL);
-    
+    DROP_CENTRE = INITIAL_PLATE_TOP + INITIAL_DROP_HEIGHT + DROP_RADIUS;
+    IMPACT_TIME = INITIAL_DROP_HEIGHT / (-DROP_VEL);
     INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     // Maximum time is shortly after the Wagner theory prediction of the 
@@ -141,16 +135,16 @@ event init (t = 0) {
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 /* Outputs the interface locations of the droplet */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    // Creates text file to save output to
-    char interface_filename[80];
-    sprintf(interface_filename, "interface_%d.txt", interface_output_no);
-    FILE *interface_file = fopen(interface_filename, "w");
+        // Creates text file to save output to
+        char interface_filename[80];
+        sprintf(interface_filename, "interface_%d.txt", interface_output_no);
+        FILE *interface_file = fopen(interface_filename, "w");
 
-    // Outputs the interface locations and closes the file
-    output_facets(f, interface_file);
-    fclose(interface_file);
+        // Outputs the interface locations and closes the file
+        output_facets(f, interface_file);
+        fclose(interface_file);
 
-    interface_output_no++;
+        interface_output_no++;
     }
 }
 

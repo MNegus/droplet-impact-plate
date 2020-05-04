@@ -17,6 +17,8 @@
 /* Computational constants derived from parameters */
 double MIN_CELL_SIZE; // Size of the smallest cell
 double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
+double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
+double DROP_CENTRE; // Initial centre of the droplet
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
 double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
@@ -61,7 +63,9 @@ int main() {
     /* Derived constants */
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
-    IMPACT_TIME = (DROP_CENTRE - DROP_RADIUS) / (-DROP_VEL);
+    PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
+    DROP_CENTRE = INITIAL_DROP_HEIGHT + DROP_RADIUS;
+    IMPACT_TIME = INITIAL_DROP_HEIGHT / (-DROP_VEL);
     INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     /* Maximum time is shortly after Wagner theory would predict the turnover 
@@ -170,8 +174,8 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
     }
 }
 
-/*
-event images (t += 0.01; t <= 2.) {
+
+event images (t += 0.01) {
 // Produces movies and images using bview 
 
     // Voriticty calculation
@@ -201,7 +205,7 @@ event images (t += 0.01; t <= 2.) {
     }
     save ("vort.mp4");
 }
-*/
+
 
 event refinement (i++) {
 /* Refines the grid where appropriate */

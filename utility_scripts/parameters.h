@@ -12,7 +12,7 @@ const double FR = 10.1; // Froude number
 /* Droplet definition */
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
 const double DROP_RADIUS = 1.0; // Radius of droplet
-const double DROP_CENTRE = 1.125; // Initial centre position of droplet
+const double INITIAL_DROP_HEIGHT = 0.125; // Initial gap between drop and plate
 
 /* Plate definition */
 const double INITIAL_PLATE_TOP = 1.0; // Initial top of plate 

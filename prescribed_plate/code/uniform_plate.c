@@ -24,6 +24,7 @@
 double MIN_CELL_SIZE; // Size of the smallest cell
 double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
 double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
+double DROP_CENTRE; // Initial centre of the droplet
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
 double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
@@ -57,16 +58,6 @@ double force_on_plate (); // Calculates the force on the plate via integration
 int main() {
 /* Main function for running the simulation */
 
-    /* If filtering is set in the parameters file, then define the FILTERED 
-    macro */
-    if (FILTERED) {
-        #define FILTERED 1
-    }
-
-    /* Changes the Poisson tolerence to what was defined in parameters.h */
-    TOLERANCE = POISSON_TOLERANCE;
-    NITERMAX = POISSON_NITERMAX;
-
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
     size(BOX_WIDTH); // Size of the domain
@@ -82,9 +73,8 @@ int main() {
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
     DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
-    IMPACT_TIME = (DROP_CENTRE - DROP_RADIUS - INITIAL_PLATE_TOP) \
-        / (PLATE_VEL - DROP_VEL);
-    
+    DROP_CENTRE = INITIAL_PLATE_TOP + INITIAL_DROP_HEIGHT + DROP_RADIUS;
+    IMPACT_TIME = INITIAL_DROP_HEIGHT / (PLATE_VEL - DROP_VEL); // 
     INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     // Maximum time is shortly after the Wagner theory prediction of the 
@@ -148,31 +138,6 @@ event moving_plate (i++) {
         u.y[] = (1. - plate[]) * u.y[]; 
     }
     boundary ((scalar *){u}); // Redefine boundary conditions for u
-
-    /* EXPERIMENTAL: Sets the pressure */
-    /* We try a fix of by setting the pressure in the mixed cell (where the 
-    plate cuts through) to be equal to the pressure in the cell above. This is 
-    kind of like a retroactive Neumann condition on the pressure */
-    // foreach() {
-    //     /* Finds the cells which the plate cuts through. If the plate is along a
-    //     cell boundary, then nothing is done. More thoroughly:
-    //         1) For a cell to be an interfacial cell, then it MUST be true that 
-    //         the cell above has plate[] == 0 and the cell below has plate[] == 1
-    //         2) If the plate cuts through a cell, then point 1) then for each y, 
-    //         point 1) is only true for one cell
-    //         3) However if the plate is lying on the boundary of a cell, then 
-    //         there will be two cells where this is true for each y. In this case,
-    //         plate[] == 0 or 1. We want to do nothing in these cases, so we
-    //         ensure that plate[] > 0 and plate[] < 1.
-    //         4) We also only test the top part of the plate, away from the curved
-    //         edge, so ensure y < PLATE_WIDTH
-    //     */
-    //     if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (plate[] > 0) \
-    //         && (plate[] < 1) && (y < PLATE_WIDTH)) {
-    //         /* Sets pressure to be equal to pressure in above cell */
-    //         p[] = p[1, 0]; 
-    //      }
-    // }
 }
 
 event refinement (i++) {
@@ -235,19 +200,6 @@ event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
     // Adds the time to the first line of the file
     fprintf(plate_output_file, "t = %g\n", t);
 
-    // /* Iterates over the cells on the boundary of the plate */
-    // foreach() {
-    //     // Determines if current cell is along the boundary of the plate
-    //     if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (y < PLATE_WIDTH)) {
-    //         /* Outputs the values along the plate and the two cells above it */
-    //         for (int h = 0; h <= 2; h++) {
-    //             fprintf(plate_output_file, \
-    //                 "y = %g, h = %d, p = %g, u_x = %g, u_y = %g\n",
-    //                 y, h, p[h, 0], u.x[h, 0], u.y[h, 0]);
-    //         }
-    //     }
-    // }
-
     /* Uses interpolation to read pressure just above the plate */
     foreach() {
         // Determines if current cell is along the boundary of the plate
@@ -285,32 +237,32 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
     }
 }
 
-// event images (t += 0.005) {
-// /* Produces movies and images using bview */
+event images (t += 0.005) {
+/* Produces movies and images using bview */
 
-//     // Creates a string with the time to put on the plots
-//     char time_str[80];
-//     sprintf(time_str, "t = %g\n", t);
+    // Creates a string with the time to put on the plots
+    char time_str[80];
+    sprintf(time_str, "t = %g\n", t);
 
-//     // Set up bview box
-//     view (width = 512, height = 512, fov = 30, ty = -0.5, \
-//         quat = {0, 0, -0.707, 0.707});
+    // Set up bview box
+    view (width = 512, height = 512, fov = 30, ty = -0.5, \
+        quat = {0, 0, -0.707, 0.707});
 
-//     // Movie of the volume fraction of the droplet
-//     clear();
-//     draw_vof("f", lw = 2);
-//     draw_vof("plate", lw = 2);
-//     squares("f", linear = true);
-//     squares("plate", linear = true);
-//     mirror ({0,1}) {
-//         draw_vof("f", lw = 2);
-//         squares("f", linear = true);
-//         draw_vof("plate", lw = 2);
-//         squares("plate", linear = true);
-//     }
-//     draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-//     save ("tracer.mp4");
-// }
+    // Movie of the volume fraction of the droplet
+    clear();
+    draw_vof("f", lw = 2);
+    draw_vof("plate", lw = 2);
+    squares("f", linear = true);
+    squares("plate", linear = true);
+    mirror ({0,1}) {
+        draw_vof("f", lw = 2);
+        squares("f", linear = true);
+        draw_vof("plate", lw = 2);
+        squares("plate", linear = true);
+    }
+    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+    save ("tracer.mp4");
+}
 
 event end (t = MAX_TIME) {
     end_wall_time = omp_get_wtime();
@@ -376,8 +328,7 @@ double force_on_plate() {
                 double ff = f[1, 0];
                 double avg_mu = ff * (mu1 - mu2) + mu2;
                 // Work out how to take into account variable visosity
-                // force += y * MIN_CELL_SIZE * (p[1, 0] - 2 * avg_mu * u_x_deriv);
-                force += y * MIN_CELL_SIZE * (p[1, 0]);
+                force += y * MIN_CELL_SIZE * (p[1, 0] - 2 * avg_mu * u_x_deriv);
         }
     }
     if (found_cell == 0) {
