@@ -51,6 +51,8 @@ int interface_output_no = 1; // Records how many interface files there have been
 // Stores time the interface was outputted
 char interface_time_filename[80] = "interface_times.txt"; 
 
+double plate_position;
+
 /* Function declarations */
 double plate_region(double xp, double yp); // Defines VOF field for plate
 double distance_from_plate (double xp, double yp); // Gives distance from plate 
