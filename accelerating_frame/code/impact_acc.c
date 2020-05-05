@@ -24,11 +24,13 @@ double MAX_TIME; // Maximum time to run the simulation for
 double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
 
 /* Global variables */
+double start_wall_time; // Time the simulation was started
+double end_wall_time; // Time the simulation finished
 int gfs_output_no = 1; // Records how many GFS files have been outputted
 int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
-double start_wall_time; // Time the simulation was started
-double end_wall_time; // Time the simulation finished
+// Stores time the interface was outputted
+char interface_time_filename[80] = "interface_times.txt"; 
 
 /* Plate position variables */
 double s_previous, s_current, s_next;
@@ -72,6 +74,11 @@ int main() {
     point reaches the radius of the droplet */
     double wagner_max_time = 2.0 * (IMPACT_TIME + 1. / 3.);
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
+
+    /* Initialises interface time file */
+    FILE* interface_time_file = fopen(interface_time_filename, "w");
+    fclose(interface_time_file);
+
     run(); // Runs the simulation
 }
 
@@ -149,16 +156,22 @@ event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 /* Outputs the interface locations of the droplet */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    // Creates text file to save output to
-    char interface_filename[80];
-    sprintf(interface_filename, "interface_%d.txt", interface_output_no);
-    FILE *interface_file = fopen(interface_filename, "w");
+        // Creates text file to save output to
+        char interface_filename[80];
+        sprintf(interface_filename, "interface_%d.txt", interface_output_no);
+        FILE *interface_file = fopen(interface_filename, "w");
 
-    // Outputs the interface locations and closes the file
-    output_facets(f, interface_file);
-    fclose(interface_file);
+        // Outputs the interface locations and closes the file
+        output_facets(f, interface_file);
+        fclose(interface_file);
 
-    interface_output_no++;
+        // Appends the interface time file with the time and plate position (0)
+        FILE *interface_time_file = fopen(interface_time_filename, "a");
+        fprintf(interface_time_file, "%d, %g, %g\n", \
+            interface_output_no, t, 0.);
+        fclose(interface_time_file);
+
+        interface_output_no++;
     }
 }
 

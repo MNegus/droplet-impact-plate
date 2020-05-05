@@ -45,11 +45,13 @@ p[top] = dirichlet(0.);
 scalar plate[]; // VOF field for the plate
 
 /* Global variables */
+double start_wall_time; // Time the simulation was started
+double end_wall_time; // Time the simulation finished
 int gfs_output_no = 1; // Records how many GFS files have been outputted
 int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
-double start_wall_time;
-double end_wall_time;
+// Stores time the interface was outputted
+char interface_time_filename[80] = "interface_times.txt"; 
 
 /* Plate position variables, which is at x = INITIAL_PLATE_TOP - s(t) */
 double s_previous, s_current, s_next; // Values of s 
@@ -97,6 +99,10 @@ int main() {
     double wagner_max_time = 1.5 * (IMPACT_TIME + 1. / 3.);
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time); 
 
+    /* Initialises interface time file */
+    FILE* interface_time_file = fopen(interface_time_filename, "w");
+    fclose(interface_time_file);
+
     /* Run the simulation */
     run();
 }
@@ -143,6 +149,12 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
         // Outputs the interface locations and closes the file
         output_facets(f, interface_file);
         fclose(interface_file);
+
+        // Appends the interface time file with the time and plate position (0)
+        FILE *interface_time_file = fopen(interface_time_filename, "a");
+        fprintf(interface_time_file, "%d, %g, %g\n", \
+            interface_output_no, t, plate_position);
+        fclose(interface_time_file);
 
         interface_output_no++;
     }
