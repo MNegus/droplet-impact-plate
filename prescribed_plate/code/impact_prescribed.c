@@ -1,4 +1,4 @@
-/* uniform_plate.c
+/* impact_prescribed.c
     An axisymmetric droplet falling towards an impermeable plate which can move
     in the vertical direction at a prescribed velocity, PLATE_VEL, which is 
     assumed to be negative

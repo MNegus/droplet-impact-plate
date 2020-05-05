@@ -1,4 +1,4 @@
-/* uniform_plate.c
+/* impact_coupled.c
     An axisymmetric droplet falling towards an impermeable plate which can move
     in the vertical direction depending on the ODE:
     alpha s''(t) + beta s'(t) + gamma s(t) = F(t)
