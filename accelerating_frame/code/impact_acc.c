@@ -241,6 +241,7 @@ event movies (t += 0.005) {
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
             squares("p", linear = false);
+        }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("pressure.mp4");
     }
