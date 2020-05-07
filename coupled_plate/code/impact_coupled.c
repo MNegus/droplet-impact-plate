@@ -224,6 +224,7 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
     }
 }
 
+
 event images (t += 0.005) {
  /* Produces movies and images using bview */ 
 
@@ -290,7 +291,6 @@ event images (t += 0.005) {
     draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
     save ("pressure.mp4");
 }
-
 
 
 event refinement (i++) {
