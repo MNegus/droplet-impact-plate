@@ -241,14 +241,10 @@ event movies (t += 0.005) {
         /* Movie of the volume fraction of the droplet */
         clear();
         draw_vof("f", lw = 2);
-        draw_vof("plate", lw = 2);
         squares("f", linear = true);
-        squares("plate", linear = true);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
             squares("f", linear = true);
-            draw_vof("plate", lw = 2);
-            squares("plate", linear = true);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("tracer.mp4");
@@ -256,12 +252,10 @@ event movies (t += 0.005) {
         /* Movie of the vertical velocity */
         clear();
         draw_vof("f", lw = 2);
-        draw_vof("plate", lw = 2);
         squares("u.x", linear = false);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
             squares("u.x", linear = false);
-            draw_vof("plate", lw = 2);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("vertical_vel.mp4");
@@ -270,12 +264,10 @@ event movies (t += 0.005) {
         /* Movie of the horizontal velocity */
         clear();
         draw_vof("f", lw = 2);
-        draw_vof("plate", lw = 2);
         squares("u.y", linear = false);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
             squares("u.y", linear = false);
-            draw_vof("plate", lw = 2);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("horizontal_vel.mp4");
@@ -283,12 +275,10 @@ event movies (t += 0.005) {
         /* Movie of the pressure */
         clear();
         draw_vof("f", lw = 2);
-        draw_vof("plate", lw = 2);
         squares("p", linear = false);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
             squares("p", linear = false);
-            draw_vof("plate", lw = 2);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("pressure.mp4");
