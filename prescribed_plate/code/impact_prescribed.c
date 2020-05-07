@@ -251,71 +251,72 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
     }
 }
 
-event images (t += 0.005) {
- /* Produces movies and images using bview */ 
+event movies (t += 0.005) {
+/* Produces movies using bview */ 
+    if (MOVIES) {
+        // Creates a string with the time to put on the plots
+        char time_str[80];
+        sprintf(time_str, "t = %g\n", t);
 
-    // Creates a string with the time to put on the plots
-    char time_str[80];
-    sprintf(time_str, "t = %g\n", t);
+        // Set up bview box
+        view (width = 512, height = 512, fov = 30, ty = -0.5, \
+            quat = {0, 0, -0.707, 0.707});
 
-    // Set up bview box
-    view (width = 512, height = 512, fov = 30, ty = -0.5, \
-        quat = {0, 0, -0.707, 0.707});
-
-    /* Movie of the volume fraction of the droplet */
-    clear();
-    draw_vof("f", lw = 2);
-    draw_vof("plate", lw = 2);
-    squares("f", linear = true);
-    squares("plate", linear = true);
-    mirror ({0,1}) {
+        /* Movie of the volume fraction of the droplet */
+        clear();
         draw_vof("f", lw = 2);
+        draw_vof("plate", lw = 2);
         squares("f", linear = true);
-        draw_vof("plate", lw = 2);
         squares("plate", linear = true);
-    }
-    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-    save ("tracer.mp4");
+        mirror ({0,1}) {
+            draw_vof("f", lw = 2);
+            squares("f", linear = true);
+            draw_vof("plate", lw = 2);
+            squares("plate", linear = true);
+        }
+        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+        save ("tracer.mp4");
 
-    /* Movie of the vertical velocity */
-    clear();
-    draw_vof("f", lw = 2);
-    draw_vof("plate", lw = 2);
-    squares("u.x", linear = false);
-    mirror ({0,1}) {
+        /* Movie of the vertical velocity */
+        clear();
         draw_vof("f", lw = 2);
+        draw_vof("plate", lw = 2);
         squares("u.x", linear = false);
-        draw_vof("plate", lw = 2);
-    }
-    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-    save ("vertical_vel.mp4");
+        mirror ({0,1}) {
+            draw_vof("f", lw = 2);
+            squares("u.x", linear = false);
+            draw_vof("plate", lw = 2);
+        }
+        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+        save ("vertical_vel.mp4");
 
 
-    /* Movie of the horizontal velocity */
-    clear();
-    draw_vof("f", lw = 2);
-    draw_vof("plate", lw = 2);
-    squares("u.y", linear = false);
-    mirror ({0,1}) {
+        /* Movie of the horizontal velocity */
+        clear();
         draw_vof("f", lw = 2);
+        draw_vof("plate", lw = 2);
         squares("u.y", linear = false);
-        draw_vof("plate", lw = 2);
-    }
-    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-    save ("horizontal_vel.mp4");
+        mirror ({0,1}) {
+            draw_vof("f", lw = 2);
+            squares("u.y", linear = false);
+            draw_vof("plate", lw = 2);
+        }
+        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+        save ("horizontal_vel.mp4");
 
-    /* Movie of the pressure */
-    clear();
-    draw_vof("f", lw = 2);
-    draw_vof("plate", lw = 2);
-    squares("p", linear = false);
-    mirror ({0,1}) {
+        /* Movie of the pressure */
+        clear();
         draw_vof("f", lw = 2);
-        squares("p", linear = false);
         draw_vof("plate", lw = 2);
+        squares("p", linear = false);
+        mirror ({0,1}) {
+            draw_vof("f", lw = 2);
+            squares("p", linear = false);
+            draw_vof("plate", lw = 2);
+        }
+        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+        save ("pressure.mp4");
     }
-    draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-    save ("pressure.mp4");
 }
 
 event end (t = MAX_TIME) {

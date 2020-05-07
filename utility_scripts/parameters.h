@@ -29,6 +29,7 @@ const double BETA = 0; // Damping term
 const double GAMMA = 1; // Elastic term
 
 /* Computational constants */
+const int MOVIES = 1; // Boolean for producing movies
 const int MINLEVEL = 4; // Minimum refinement level 
 const int MAXLEVEL = 12; // Maximum refinement level
 const double BOX_WIDTH = 4.0; // Width of the computational box
