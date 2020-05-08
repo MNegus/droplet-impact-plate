@@ -44,6 +44,7 @@ p[right] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions far from the droplet in the radial direction
 u.n[top] = neumann(0.); // Allows outflow through boundary
+u.t[top] = dirichlet(0.); // Initial stationary vertical flow
 p[top] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions on surface
@@ -320,7 +321,8 @@ event moving_plate (i++) {
     s_current = s_next; 
 
     // Redefines upper boundary condition on u
-    u.n[top] = ds_dt;
+    u.n[right] = ds_dt;
+    u.t[top] = ds_dt;
 
     // Redefine boundary conditions for u
     boundary ((scalar *){u}); 
