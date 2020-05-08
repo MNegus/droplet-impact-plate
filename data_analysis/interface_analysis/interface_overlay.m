@@ -15,18 +15,21 @@ function interface_overlay(plot_type)
 % expect a different directory for each simulation result.
 
 % Directory where the resulting videos are to be stored
-results_directory = "/mnt/newarre";
+results_directory = "/mnt/newarre/analysis_tests";
 
 % Master directory where all of the data is stored under (e.g. external
 % hard drive location)
-master_directory = "/mnt/newarre/";
+master_directory = "/mnt/newarre/analysis_tests/";
 
 % Individual directory names under the master directory. We assume that the
 % interface files are stored under
 % master_directory/data_directory(k)/raw_data
-data_directories = ["wall_test", "prescribed_test", "coupled_test"];
+data_directories = ["wall_test", "stationary_prescribed", "coupled_test"];
+no_dirs = length(data_directories); % Number of entries
 
-no_dirs = length(data_directories);
+% Entries in the legend
+legend_entries = ["Wall", "Embedded", "$\alpha = 0.01, \gamma = 1$"];
+
 
 % Concatenates the data_directories array with the master directory
 for k = 1 : length(data_directories)
@@ -38,7 +41,7 @@ end
 
 % MAKE BASED ON TIME
 % Range of plot numbers to record
-plot_range = 125:600;
+plot_range = 115:600;
 
 % Colors of the lines (assuming there are a maximum of 4 lines) 
 line_colors = [[0    0.4470    0.7410]; 
@@ -80,7 +83,7 @@ max_file_length = 0; % Current "maximum" length of a file
 for k = 1 : no_dirs
     % Read the impact_times file for this simulation
     read_mat = dlmread(...
-        sprintf("%s/raw_data/interface_times.txt", data_directories(k))); 
+        sprintf('%s/raw_data/interface_times.txt', data_directories(k))); 
 
     % Finds the length of the file
     file_length = length(read_mat(:, 1));
@@ -106,9 +109,6 @@ interface_times = interface_times(interface_times(:, 1) > 1, :);
 figure_no = 1; % Figure number
 close(figure(figure_no)); % Closes existing plot
 figure(figure_no); % Creates figure
-xlim(x_limits);
-ylim(y_limits);
-grid on;
 
 % Resolution and aspect ratio of figure
 set(gcf,'position',[10,10,width,height]);
@@ -152,19 +152,42 @@ for plot_no = plot_range
         
         % Plot the line of best fit 
         figure(figure_no);
-        plot(r_interp, z_query, 'color', line_colors(k, :));
+        plot(r_interp, z_query, 'color', line_colors(k, :), ...
+            'Linewidth', 2);
         
         % Turns on the hold after the first plot
         if k == 1
             hold on;
         end
     end
+    
+    % Draws a horizontal line at z = 0 (where the plate is)
+    yline(0, '--', 'color', 0.2 * [1 1 1]);
+    
     hold off;
     
+    %%%%%%%%%%%%%%%%%%%
     % Figure properties
-%     set(gca,'DataAspectRatio',[1 1 1]); % Enforces aspect ratio
-    xlim(x_limits);
-    ylim(y_limits);
+    %%%%%%%%%%%%%%%%%%%
+    % Title
+    title(sprintf("Interfaces at $t = %.03f$", ...
+        interface_times(plot_no, 2)), ...
+        "Interpreter", "latex", 'Fontsize', 15);
+    
+    % Axes limits, labels and font sizes
+    xlim(x_limits); ylim(y_limits); % Axes limits
+    xlabel("$r$", "Interpreter", "latex", 'Fontsize', 30);
+    ylabel("$z$", "Interpreter", "latex", 'Fontsize', 30);
+    ax = gca;
+    ax.FontSize = 16;
+    set(gca,'TickLabelInterpreter','latex');
+    
+    % Set up the legend
+    legend(legend_entries, 'Interpreter', 'latex', 'FontSize', 15, ...
+        'Location', 'northeast');
+    
+    grid on; % Puts on a grid
+    
     % Draws frame to video
     drawnow;
     frame = getframe(gcf);
