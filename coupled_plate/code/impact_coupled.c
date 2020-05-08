@@ -178,23 +178,23 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         // Iterates over the cells above the plate
         foreach(reduction(+:force)) {
             // Identifies the cells along the plate
-            if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (y < PLATE_WIDTH)) {
-                    
-                    /* Force calculation */
-                    // Viscosity average in the cell above the plate
-                    double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
+            if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) \
+                && (y < PLATE_WIDTH)) { 
+                /* Force calculation */
+                // Viscosity average in the cell above the plate
+                double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
 
-                    // Viscous stress in the cell above the plate
-                    double viscous_stress = \
-                        - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+                // Viscous stress in the cell above the plate
+                double viscous_stress = \
+                    - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
 
-                    // Adds the contribution to the force using trapeze rule
-                    force += y * Delta * (p[1, 0] + viscous_stress);
+                // Adds the contribution to the force using trapeze rule
+                force += y * Delta * (p[1, 0] + viscous_stress);
 
-                    /* Plate output */
-                    fprintf(plate_output_file, \
-                        "y = %.8f, x = %.8f, p = %.8f, strss = %.8f\n",\
-                        y, x, p[1, 0], viscous_stress);
+                /* Plate output */
+                fprintf(plate_output_file, \
+                    "y = %.8f, x = %.8f, p = %.8f, strss = %.8f\n",\
+                    y, x, p[1, 0], viscous_stress);
             }
         }
 

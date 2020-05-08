@@ -133,25 +133,52 @@ event small_droplet_removal (i++) {
     remove_droplets(f, 5, 1e-4, true); 
 }
 
-event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
-/* Outputs the stats about the flow to the log file */
-    
-    /* Force calculation */
-    double force = 0.; // Initialises the force variable
+event output_data (t += PLATE_OUTPUT_TIMESTEP) {
+/* Outputs data about the flow */
+    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
+        // Creates the file for outputting data along the plate
+        char plate_output_filename[80];
+        sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
+        FILE *plate_output_file = fopen(plate_output_filename, "w");
 
-    // Loops over the left hand boundary (the interface)
-    foreach_boundary(left, reduction(+:force)) {
-        // Only looks at cells along the plate
-        if (y < PLATE_WIDTH) {
-                // Increments the force using the trapezoidal rule
-                force += y * Delta * p[1, 0];
+        // Adds the time to the first line of the plate output file
+        fprintf(plate_output_file, "t = %.4f\n", t);
+
+        // Initialises the force variable
+        double force = 0.; 
+
+        // Iterates over the cells above the plate
+        foreach_boundary(left,reduction(+:force)) {
+            if (y < PLATE_WIDTH) {
+                /* Force calculation */
+                // Viscosity average in the cell above the plate
+                double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
+
+                // Viscous stress in the cell above the plate
+                double viscous_stress = \
+                    - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+
+                // Adds the contribution to the force using trapeze rule
+                force += y * Delta * (p[1, 0] + viscous_stress);
+
+                /* Plate output */
+                fprintf(plate_output_file, \
+                    "y = %.8f, x = %.8f, p = %.8f, strss = %.8f\n",\
+                    y, x, p[1, 0], viscous_stress);
+            }
         }
+
+        // Close plate output file
+        fclose(plate_output_file);
+        plate_output_no++; // Increments output number
+
+        // Integrates force about the angular part
+        force = 2 * pi * force; 
+
+        /* Outputs data to log file */
+        fprintf(stderr, \
+            "t = %.8f, v = %.8f, F = %.8f\n", t, 2 * pi * statsf(f).sum, force);
     }
-
-    force = 2 * pi * force; // Integrates about the angular part
-
-    /* Outputs to log file */
-    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force);
 }
 
 
@@ -175,42 +202,6 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 
         // Increments output number
         interface_output_no++;
-    }
-}
-
-
-event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
-/* Outputs the values of pressure and viscous stress along the plate */
-    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-        // Creates the file for outputting data
-        char plate_output_filename[80];
-        sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
-        FILE *plate_output_file = fopen(plate_output_filename, "w");
-
-        // Adds the time to the first line of the file
-        fprintf(plate_output_file, "t = %g\n", t);
-
-        foreach_boundary(left) {
-            if (y < PLATE_WIDTH) {
-                /* Calculates the viscous stress term in the cell above the 
-                plate */
-                // Viscosity using volume averaging
-                double avg_mu = f[1, 0] * (mu1 - mu2) + mu2; 
-
-                // Derivative of vertical velocity in vertical direction
-                double u_x_deriv = (u.x[2, 0] - u.x[1, 0]) / Delta;
-
-                double viscous_stress = - 2 * avg_mu * u_x_deriv;
-
-                fprintf(plate_output_file, \
-                "y = %g, x = %g, p = %g, v_strss = %g\n",\
-                 y, x, p[1, 0], viscous_stress);
-            }
-        }
-
-        fclose(plate_output_file);
-
-        plate_output_no++; // Increments output number
     }
 }
 
