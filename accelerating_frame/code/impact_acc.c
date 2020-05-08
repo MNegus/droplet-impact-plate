@@ -21,7 +21,6 @@ double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
 double DROP_CENTRE; // Initial centre of the droplet
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
-double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
 
 /* Global variables */
 double start_wall_time; // Time the simulation was started
@@ -33,18 +32,19 @@ int interface_output_no = 1; // Records how many interface files there have been
 char interface_time_filename[80] = "interface_times.txt"; 
 
 /* Plate position variables */
-double s_previous, s_current, s_next;
+double s_previous = 0.; // Value of s at previous timestep
+double s_current = 0.; // Value of s at current timestep
+double s_next; // Values of s at next timestep
 double ds_dt; // First time derivative of s
 double d2s_dt2; // Second time derivative of s
 
 /* Boundary conditions */
 // Conditions for entry from above
-u.n[right] = dirichlet(0.); // Initial stationary flow above
+u.n[right] = neumann(0.); // Initial stationary flow above
 p[right] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions far from the droplet in the radial direction
 u.n[top] = neumann(0.); // Allows outflow through boundary
-u.t[top] = dirichlet(0.); // Initial stationary vertical flow
 p[top] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions on surface
@@ -53,6 +53,7 @@ u.t[left] = dirichlet(0.); // No slip at surface
 
 int main() {
 /* Main function to set up the simulation */
+
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
     size(BOX_WIDTH); // Size of the domain
@@ -70,7 +71,6 @@ int main() {
     PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
     DROP_CENTRE = INITIAL_DROP_HEIGHT + DROP_RADIUS;
     IMPACT_TIME = INITIAL_DROP_HEIGHT / (-DROP_VEL);
-    INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     /* Maximum time is shortly after Wagner theory would predict the turnover 
     point reaches the radius of the droplet */
@@ -104,14 +104,80 @@ event init(t = 0) {
         u.x[] = DROP_VEL * f[];
     }
 
-    /* Initialise the plate position, velocity and acceleration to be zero */
-    s_previous = 0.;
-    s_current = 0.;
-    d2s_dt2 = 0.;
 }
 
-event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
-/* Outputs the stats about the flow*/
+
+event refinement (i++) {
+/* Refines the grid where appropriate */
+
+    /* Adapts with respect to velocities and volume fraction */
+    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-2},
+        minlevel = MINLEVEL, maxlevel = MAXLEVEL);
+    
+    /* Refines above the plate */
+    refine((y < PLATE_WIDTH) && (x < 0.5 * PLATE_REFINED_WIDTH) \
+        && level < MAXLEVEL);
+}
+
+
+event moving_plate (i++) {
+/* Moves the plate as a function of the force on it */
+
+    /* Calculate the force on the plate by integrating using trapeze rule*/
+    double force = 0.; // Initialise to be zero
+
+    // Iterates over the solid boundary
+    foreach_boundary(left, reduction(+:force)) {
+        if (y < PLATE_WIDTH) {
+            // Viscosity average in the cell above the plate
+            double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
+
+            // Viscous stress in the cell above the plate
+            double viscous_stress = \
+                 - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+
+            // Adds the contribution to the force using trapeze rule
+            force += y * Delta * (p[1, 0] + viscous_stress);
+        }
+    }
+
+    force = 2 * pi * force; // Integrates about the angular part
+
+    /* Solves the ODE for the updated plate position and acceleration */
+    s_next = (dt * dt * force \
+        + (2. * ALPHA - dt * dt * GAMMA) * s_current \
+        - (ALPHA - dt * BETA / 2.) * s_previous) \
+        / (ALPHA + dt * BETA / 2.);
+
+    /* Updates values of s and its derivatives */
+    ds_dt = (s_next - s_previous) / (2. * dt);
+    d2s_dt2 = (s_next - 2 * s_current + s_previous) / (dt * dt);
+    s_previous = s_current;
+    s_current = s_next; 
+}
+
+
+event acceleration (i++) {
+/* Adds acceleration due to gravity and the moving plate at each time step */
+    face vector av = a; // Acceleration at each face
+
+    /* Adds acceleration due to gravity and the plate */
+    foreach_face(x){
+        av.x[] += d2s_dt2 - 1./sq(FR);
+    }
+}
+
+
+event small_droplet_removal (i++) {
+/* Removes any small droplets or bubbles that have formed, that are smaller than
+    a specific size */
+    // Removes droplets of diameter 5 cells or less
+    remove_droplets(f, 5);
+}
+
+
+event output_data (t += PLATE_OUTPUT_TIMESTEP) {
+/* Outputs data about the flow*/
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         // Creates the file for outputting data along the plate
         char plate_output_filename[80];
@@ -149,8 +215,9 @@ event output_stats (t += PLATE_OUTPUT_TIMESTEP) {
         force = 2 * pi * force; 
 
         /* Outputs to force and volume to log file */
-        fprintf(stderr, "t = %g, v = %g, F = %g, s = %g, d2s_dt2 = %g\n", \
-            t, 2 * pi * statsf(f).sum, force, s_current, d2s_dt2);
+        fprintf(stderr, \
+            "t = %g, v = %g, F = %g, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
+            t, 2 * pi * statsf(f).sum, force, s_current, ds_dt, d2s_dt2);
     }
 }
 
@@ -181,11 +248,11 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 /* Saves a gfs file */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    char gfs_filename[80];
-    sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
-    output_gfs(file = gfs_filename);
+        char gfs_filename[80];
+        sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
+        output_gfs(file = gfs_filename);
 
-    gfs_output_no++;
+        gfs_output_no++;
     }
 }
 
@@ -249,89 +316,11 @@ event movies (t += 0.005) {
 }
 
 
-event refinement (i++) {
-/* Refines the grid where appropriate */
-
-    /* Adapts with respect to velocities and volume fraction */
-    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-2},
-        minlevel = MINLEVEL, maxlevel = MAXLEVEL);
-    
-    /* Refines above the plate */
-    refine((y < PLATE_WIDTH) && (x < 0.5 * PLATE_REFINED_WIDTH) \
-        && level < MAXLEVEL);
-}
-
-
-event acceleration (i++) {
-/* Adds acceleration due to gravity and the moving plate at each time step */
-    face vector av = a; // Acceleration at each face
-
-    /* Adds acceleration due to gravity and the plate */
-    foreach_face(x){
-        av.x[] += d2s_dt2 - 1./sq(FR);
-    }
-}
-
-
-event small_droplet_removal (i++) {
-/* Removes any small droplets or bubbles that have formed, that are smaller than
-    a specific size */
-    // Removes droplets of diameter 5 cells or less
-    remove_droplets(f, 5);
-
-    // Removes bubbles of diameter 5 cells or less
-    remove_droplets(f, 5, 1e-4, true); 
-}
-
-
-event moving_plate (i++) {
-/* Moves the plate as a function of the force on it */
-
-    /* Calculate the force on the plate by integrating using trapeze rule*/
-    double force = 0.; // Initialise to be zero
-
-    // Iterates over the solid boundary
-    foreach_boundary(left, reduction(+:force)) {
-        // Viscosity average in the cell above the plate
-        double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
-
-        // Viscous stress in the cell above the plate
-        double viscous_stress = - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
-
-        // Adds the contribution to the force using trapeze rule
-        force += y * Delta * (p[1, 0] + viscous_stress);
-    }
-
-    force = 2 * pi * force; // Integrates about the angular part
-
-    /* Solves the ODE for the updated plate position and acceleration */
-    s_next = (dt * dt * force \
-        + (2. * ALPHA - dt * dt * GAMMA) * s_current \
-        - (ALPHA - dt * BETA / 2.) * s_previous) \
-        / (ALPHA + dt * BETA / 2.);
-
-    // Updates first derivative
-    ds_dt = (s_next - s_previous) / (2. * dt);
-
-    // Updates second derivative
-    d2s_dt2 = (s_next - 2 * s_current + s_previous) / (dt * dt);
-
-    // Updates current and previous values of s
-    s_previous = s_current;
-    s_current = s_next; 
-
-    // Redefines upper boundary condition on u
-    u.n[right] = ds_dt;
-    u.t[top] = ds_dt;
-
-    // Redefine boundary conditions for u
-    boundary ((scalar *){u}); 
-}
-
-
 event end (t = MAX_TIME) {
-/* Ends the simulation */
-    end_wall_time = omp_get_wtime();
-    fprintf(stderr, "Finished after %g seconds\n", end_wall_time - start_wall_time);
-}
+/* Ends the simulation */ 
 
+    end_wall_time = omp_get_wtime(); // Records the time of finish
+
+    fprintf(stderr, "Finished after %g seconds\n", \
+        end_wall_time - start_wall_time);
+}
