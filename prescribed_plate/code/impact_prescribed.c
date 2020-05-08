@@ -29,19 +29,6 @@ double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
 double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
 
-/* Boundary conditions */
-// Outflow through boundaries far from impact
-u.n[right] = neumann(0.); 
-u.n[top] = neumann(0.);
-u.n[left] = neumann(0.);
-
-// Zero pressure far from impact
-p[right] = dirichlet(0.); 
-p[top] = dirichlet(0.); 
-
-/* Fields */
-scalar plate[]; // VOF field for the plate
-
 /* Global variables */
 double start_wall_time; // Time the simulation was started
 double end_wall_time; // Time the simulation finished
@@ -51,12 +38,31 @@ int interface_output_no = 1; // Records how many interface files there have been
 // Stores time the interface was outputted
 char interface_time_filename[80] = "interface_times.txt"; 
 
-double plate_position;
+/* Plate position variable, of which the top is at 
+x = INITIAL_PLATE_TOP + PLATE_VEL * t */
+double plate_position = INITIAL_PLATE_TOP;
 
 /* Function declarations */
 double plate_region(double xp, double yp); // Defines VOF field for plate
 double distance_from_plate (double xp, double yp); // Gives distance from plate 
 double force_on_plate (); // Calculates the force on the plate via integration
+
+/* Fields */
+scalar plate[]; // VOF field for the plate
+
+/* Boundary conditions */
+// Conditions for entry from above
+u.n[right] = neumann(0.); // Allows outflow through boundary
+p[right] = dirichlet(0.); // 0 pressure far from droplet
+
+// Conditions far from the droplet in the radial direction
+u.n[top] = neumann(0.); // Allows outflow through boundary
+p[top] = dirichlet(0.); // 0 pressure far from surface
+
+// Conditions on boundary below the plate
+u.n[left] = neumann(0.); // Allows outflow through boundary
+p[left] = dirichlet(0.); // 0 pressure far from droplet
+
 
 int main() {
 /* Main function for running the simulation */
@@ -99,8 +105,6 @@ event init (t = 0) {
     // Records the wall time
     start_wall_time = omp_get_wtime();
 
-    plate_position = INITIAL_PLATE_TOP; // Initialises top of plate position
-
     /* Refines around the droplet */
     refine(sq(x - DROP_CENTRE) + sq(y) < sq(DROP_RADIUS + DROP_REFINED_WIDTH) \
         && sq(x - DROP_CENTRE) + sq(y) > sq(DROP_RADIUS - DROP_REFINED_WIDTH) \
@@ -125,11 +129,34 @@ event init (t = 0) {
 }
 
 
+event refinement (i++) {
+/* Adaptive grid refinement */
+    
+	// Adapts with respect to velocities and volume fractions 
+    adapt_wavelet ({u.x, u.y, f, plate}, (double[]){1e-2, 1e-2, 1e-2, 1e-2}, 
+        minlevel = MINLEVEL, maxlevel = MAXLEVEL);
+
+    // Refines region above plate
+    refine((y < PLATE_WIDTH) && (x >= plate_position) \
+        && (x < plate_position + 0.5 * PLATE_REFINED_WIDTH) \
+		&& (level < MAXLEVEL));
+}
+
+
+event gravity (i++) {
+/* Adds acceleration due to gravity in the vertical direction */
+    face vector av = a; // Acceleration at each face
+    foreach_face(x) av.x[] += - 1/sq(FR); // Adds acceleration due to gravity
+}
+
+
 event moving_plate (i++) {
+/* Moves the plate at the prescribed velocity */
+
     /* Updates plate position */
     plate_position = INITIAL_PLATE_TOP + PLATE_VEL * t;
 
-     /* Refines around the plate */
+    /* Refines around the plate */
     refine(distance_from_plate(x, y) < PLATE_REFINED_WIDTH \
         && level < MAXLEVEL - 2);
 
@@ -147,37 +174,65 @@ event moving_plate (i++) {
     boundary ((scalar *){u}); // Redefine boundary conditions for u
 }
 
-event refinement (i++) {
-
-    // Adapts with respect to velocities and volume fractions 
-    adapt_wavelet ({u.x, u.y, f, plate}, (double[]){1e-2, 1e-2, 1e-2, 1e-2}, 
-        minlevel = MINLEVEL, maxlevel = MAXLEVEL);
-
-    // Refines region above plate
-    refine(y < PLATE_WIDTH && x >= plate_position \
-        && x < plate_position + 0.5 * PLATE_REFINED_WIDTH && level < MAXLEVEL);
-}
-
-event gravity (i++) {
-/* Adds acceleration due to gravity in the vertical direction */
-    face vector av = a; // Acceleration at each face
-    foreach_face(x) av.x[] += - 1/sq(FR); // Adds acceleration due to gravity
-}
 
 event small_droplet_removal (i++) {
 /* Removes any small droplets or bubbles that have formed, that are smaller than
     a specific size */
     // Removes droplets of diameter 5 cells or less
     remove_droplets(f, 5);
-
-    // Removes bubbles of diameter 5 cells or less
-    remove_droplets(f, 5, 1e-4, true); 
 }
 
-event output_volume (t += 0.001) {
-/* Outputs the volume of the liquid phase to the log file */
-    fprintf(stderr, "t = %g, v = %g, F = %g\n", t, 2 * pi * statsf(f).sum, force_on_plate());
+
+event output_data (t += PLATE_OUTPUT_TIMESTEP) {
+/* Outputs data about the flow */
+    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
+        // Creates the file for outputting data along the plate
+        char plate_output_filename[80];
+        sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
+        FILE *plate_output_file = fopen(plate_output_filename, "w");
+
+        // Adds the time to the first line of the plate output file
+        fprintf(plate_output_file, "t = %.4f\n", t);
+
+        // Initialises the force variable
+        double force = 0.; 
+
+        // Iterates over the cells above the plate
+        foreach(reduction(+:force)) {
+            // Identifies the cells along the plate
+            if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) \
+                && (y < PLATE_WIDTH)) { 
+                /* Force calculation */
+                // Viscosity average in the cell above the plate
+                double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
+
+                // Viscous stress in the cell above the plate
+                double viscous_stress = \
+                    - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+
+                // Adds the contribution to the force using trapeze rule
+                force += y * Delta * (p[1, 0] + viscous_stress);
+
+                /* Plate output */
+                fprintf(plate_output_file, \
+                    "y = %.8f, x = %.8f, p = %.8f, strss = %.8f\n",\
+                    y, x, p[1, 0], viscous_stress);
+            }
+        }
+
+        // Close plate output file
+        fclose(plate_output_file);
+        plate_output_no++; // Increments output number
+
+        // Integrates force about the angular part
+        force = 2 * pi * force; 
+
+        /* Outputs data to log file */
+        fprintf(stderr,  "t = %.8f, v = %.8f, F = %g\n", \
+            t, 2 * pi * statsf(f).sum, force);
+    }
 }
+
 
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 /* Outputs the interface locations of the droplet */
@@ -202,52 +257,15 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
     }
 }
 
-event output_values_along_plate (t += PLATE_OUTPUT_TIMESTEP) {
-/* Outputs the values of pressure and velocities along the plate */
-
-    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    // Creates the file for outputting data
-    char plate_output_filename[80];
-    sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
-    FILE *plate_output_file = fopen(plate_output_filename, "w");
-
-    // Adds the time to the first line of the file
-    fprintf(plate_output_file, "t = %g\n", t);
-
-    /* Uses interpolation to read pressure just above the plate */
-    foreach() {
-        // Determines if current cell is along the boundary of the plate
-        if ((plate[1, 0] == 0) && (plate[-1, 0] == 1) && (y < PLATE_WIDTH)) {
-            // x position to interpolate from
-            double interpolate_read_pos = plate_position + INTERPOLATE_DISTANCE;
-
-            // Interpolated pressure
-            double pressure = interpolate(p, interpolate_read_pos, y);
-
-            // Interpolated velocities
-            double ux = interpolate(u.x, interpolate_read_pos, y);
-            double uy = interpolate(u.y, interpolate_read_pos, y);
-
-            fprintf(plate_output_file, \
-                    "y = %g, x = %g, p = %g, u_x = %g, u_y = %g\n",
-                    y, interpolate_read_pos, pressure, ux, uy);
-        }
-    }
-
-    fclose(plate_output_file);
-
-    plate_output_no++; // Increments output number
-    }
-}
 
 event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 /* Saves a gfs file */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    char gfs_filename[80];
-    sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
-    output_gfs(file = gfs_filename);
+        char gfs_filename[80];
+        sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
+        output_gfs(file = gfs_filename);
 
-    gfs_output_no++;
+        gfs_output_no++;
     }
 }
 
@@ -320,8 +338,12 @@ event movies (t += 0.005) {
 }
 
 event end (t = MAX_TIME) {
-    end_wall_time = omp_get_wtime();
-    fprintf(stderr, "Finished after %g seconds\n", end_wall_time - start_wall_time);
+/* Ends the simulation */ 
+
+    end_wall_time = omp_get_wtime(); // Records the time of finish
+
+    fprintf(stderr, "Finished after %g seconds\n", \
+        end_wall_time - start_wall_time);
 }
 
 

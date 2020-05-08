@@ -188,7 +188,7 @@ event moving_plate (i++) {
         - (ALPHA - dt * BETA / 2.) * s_previous) \
         / (ALPHA + dt * BETA / 2.);
 
-    /* Updates values of s */
+    /* Updates values of s and its derivatives */
     ds_dt = (s_next - s_previous) / (2. * dt);
     d2s_dt2 = (s_next - 2 * s_current + s_previous) / (dt * dt);
     s_previous = s_current;
@@ -197,6 +197,10 @@ event moving_plate (i++) {
     /* Updates plate position and velocity */
     plate_position = INITIAL_PLATE_TOP - s_current;
     plate_vel = -ds_dt;
+
+	/* Refines around the plate */
+    refine(distance_from_plate(x, y) < PLATE_REFINED_WIDTH \
+        && level < MAXLEVEL - 2);
 
     /* Redefine the plate volume fraction */
     fraction(plate, 1 - plate_region(x, y));
