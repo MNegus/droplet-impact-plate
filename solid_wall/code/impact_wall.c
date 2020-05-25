@@ -1,9 +1,11 @@
 /* impact_wall.c
-    A Basilisk script to model the impact of a droplet of water impacting onto a
-    rigid surface. 
+    An axisymmetric droplet falling towards an impermeable, rigid surface lying 
+    along the boundary at z = 0. 
 
-    Set up to compare to the case where the rigid surface is defined using a 
-    volume fraction
+    Run until the turnover point approximately reaches the initial droplet 
+    radius. 
+
+    Author: Michael Negus
 */
 
 #include "parameters.h" // Includes all defined parameters
@@ -15,7 +17,6 @@
 #include "tag.h" // For removing small droplets
 #include <omp.h> // For openMP parallel
 
-
 /* Computational constants derived from parameters */
 double MIN_CELL_SIZE; // Size of the smallest cell
 double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
@@ -23,7 +24,6 @@ double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
 double DROP_CENTRE; // Initial centre position of the droplet
 double IMPACT_TIME; // Theoretical time of impact
 double MAX_TIME; // Maximum time to run the simulation for
-double INTERPOLATE_DISTANCE; // Distance above plate to read the pressure
 
 /* Global variables */
 double start_wall_time; // Time the simulation was started
@@ -48,6 +48,7 @@ u.n[left] = dirichlet(0.); // No flow through surface
 u.t[left] = dirichlet(0.); // No slip at surface
 
 int main() {
+/* Main function for running the simulation */
 
     /* Create the computational domain */
     init_grid(1 << MINLEVEL); // Create grid according to the minimum level
@@ -66,7 +67,6 @@ int main() {
     DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
     DROP_CENTRE = INITIAL_DROP_HEIGHT + DROP_RADIUS; // Initial centre of drop
     IMPACT_TIME = INITIAL_DROP_HEIGHT / (-DROP_VEL); // Theoretical impact time
-    INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
 
     /* Maximum time is shortly after Wagner theory would predict the turnover 
     point reaches the radius of the droplet */
@@ -100,13 +100,14 @@ event init(t = 0) {
     foreach() {
         u.x[] = DROP_VEL * f[];
     }
+    boundary ((scalar *){u});
 }
 
 
 event refinement (i++) {
-/* Refines the grid where appropriate */
+/* Adaptive grid refinement */
 
-    /* Adapts with respect to velocities and volume fraction */
+    // Adapts with respect to velocities and volume fraction 
     adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-2},
         minlevel = MINLEVEL, maxlevel = MAXLEVEL);
     
@@ -117,7 +118,7 @@ event refinement (i++) {
 
 
 event gravity (i++) {
-/* Adds acceleration due to gravity at each time step */
+/* Adds acceleration due to gravity in the vertical direction */
     face vector av = a; // Acceleration at each face
     foreach_face(x) av.x[] -= 1./sq(FR); // Adds acceleration due to gravity
 }
@@ -128,10 +129,8 @@ event small_droplet_removal (i++) {
     a specific size */
     // Removes droplets of diameter 5 cells or less
     remove_droplets(f, 5);
-
-    // Removes bubbles of diameter 5 cells or less
-    remove_droplets(f, 5, 1e-4, true); 
 }
+
 
 event output_data (t += PLATE_OUTPUT_TIMESTEP) {
 /* Outputs data about the flow */
@@ -209,11 +208,11 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 /* Saves a gfs file */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-    char gfs_filename[80];
-    sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
-    output_gfs(file = gfs_filename);
+        char gfs_filename[80];
+        sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
+        output_gfs(file = gfs_filename);
 
-    gfs_output_no++;
+        gfs_output_no++;
     }
 }
 
@@ -278,7 +277,11 @@ event movies (t += 0.005) {
 
 
 event end (t = MAX_TIME) {
-    end_wall_time = omp_get_wtime();
-    fprintf(stderr, "Finished after %g seconds\n", end_wall_time - start_wall_time);
+/* Ends the simulation */ 
+
+    end_wall_time = omp_get_wtime(); // Records the time of finish
+
+    fprintf(stderr, "Finished after %g seconds\n", \
+        end_wall_time - start_wall_time);
 }
 
