@@ -3,11 +3,11 @@ Header file for the parameters to feed into the simulations for droplet impact
 */
 
 /* Fluid properties */
-const double RHO_R = 0.003; // Density ratio
-const double MU_R = 0.002; // Viscosity ratio
-const double REYNOLDS = 1000.0; // Reynolds number
-const double WEBER = 10000.0; // Weber number
-const double FR = 10.1; // Froude number
+const double RHO_R = 0.00120; // Density ratio
+const double MU_R = 0.0183; // Viscosity ratio
+const double REYNOLDS = 9980; // Reynolds number
+const double WEBER = 1370; // Weber number
+const double FR = 101; // Froude number
 
 /* Droplet definition */
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
@@ -20,7 +20,7 @@ const double PLATE_WIDTH = 3.0; // Width of plate (horizontal direction)
 const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
 
 /* Prescribed plate parameters (only used when plate velocity is prescribed) */
-const double PLATE_VEL = -0.1; // Velocity of the plate
+const double PLATE_VEL = 0; // Velocity of the plate
 
 /* Plate ODE terms (only used when plate is coupled). Corresponds to 
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
