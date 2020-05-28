@@ -46,6 +46,30 @@ sed -e "s/s = //g" -i ${CLEANED_DATA_DIR}/output.txt
 
 echo Cleaned log file
 
+# Moves the log file into the main directory, for more easy access
+mv ${RAW_DATA_DIR}/log ${PARENT_DIR}
+
+################################################################################
+# Moves the videos into a separate directory
+################################################################################
+
+# Makes a directory for the movies
+MOVIE_DIR=${PARENT_DIR}/movies
+mkdir ${MOVIE_DIR}
+
+# Moves all mp4 files from the raw_data directory into the movies directory
+mv ${RAW_DATA_DIR}/*.mp4 ${MOVIE_DIR}
+
+################################################################################
+# Moves the gfs files into a separate directory
+################################################################################
+
+# Makes a directory for the gfs files
+GFS_DIR=${PARENT_DIR}/gfs_files
+mkdir ${GFS_DIR}
+
+# Moves all the gfs files from the raw_data direcotry into the movies directory
+mv ${RAW_DATA_DIR}/*.gfs ${GFS_DIR}
 
 ################################################################################
 # Cleans the plate output files
