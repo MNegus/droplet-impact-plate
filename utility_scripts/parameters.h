@@ -5,9 +5,9 @@ Header file for the parameters to feed into the simulations for droplet impact
 /* Fluid properties */
 const double RHO_R = 0.00120; // Density ratio
 const double MU_R = 0.0183; // Viscosity ratio
-const double REYNOLDS = 9980; // Reynolds number
-const double WEBER = 1370; // Weber number
-const double FR = 101; // Froude number
+const double REYNOLDS = 4990; // Reynolds number
+const double WEBER = 342; // Weber number
+const double FR = 50.5 // Froude number
 
 /* Droplet definition */
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
@@ -31,7 +31,7 @@ const double GAMMA = 1; // Elastic term
 /* Computational constants */
 const int MOVIES = 1; // Boolean for producing movies
 const int MINLEVEL = 4; // Minimum refinement level 
-const int MAXLEVEL = 12; // Maximum refinement level
+const int MAXLEVEL = 10; // Maximum refinement level
 const double BOX_WIDTH = 4.0; // Width of the computational box
 const double START_OUTPUT_TIME = 0.0; // Time to start outputs
 const double END_OUTPUT_TIME = 2.0; // Time to end outputs
