@@ -40,7 +40,7 @@ char interface_time_filename[80] = "interface_times.txt";
 
 /* Plate position variable, of which the top is at 
 x = INITIAL_PLATE_TOP + PLATE_VEL * t */
-double plate_position = INITIAL_PLATE_TOP;
+double plate_position; 
 
 /* Function declarations */
 double plate_region(double xp, double yp); // Defines VOF field for plate
@@ -85,6 +85,9 @@ int main() {
     DROP_CENTRE = INITIAL_PLATE_TOP + INITIAL_DROP_HEIGHT + DROP_RADIUS;
     IMPACT_TIME = INITIAL_DROP_HEIGHT / (PLATE_VEL - DROP_VEL); // 
     INTERPOLATE_DISTANCE = MIN_CELL_SIZE; // Distance above plate to read pressure
+
+    /* Initialises plate position */
+    plate_position = INITIAL_PLATE_TOP;
 
     // Maximum time is shortly after the Wagner theory prediction of the 
     // turnover point reaching the radius of the droplet
