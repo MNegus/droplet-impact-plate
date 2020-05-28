@@ -40,7 +40,7 @@ double d2s_dt2; // Second time derivative of s
 
 /* Boundary conditions */
 // Conditions for entry from above
-u.n[right] = neumann(0.); // Initial stationary flow above
+u.n[right] = dirichlet(0.); // Initial stationary flow above
 p[right] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions far from the droplet in the radial direction
@@ -154,6 +154,18 @@ event moving_plate (i++) {
     d2s_dt2 = (s_next - 2 * s_current + s_previous) / (dt * dt);
     s_previous = s_current;
     s_current = s_next; 
+
+    /* OVERRIDE: CONSTANT ACCELERATION */
+    d2s_dt2 = 0.5;
+    ds_dt = d2s_dt2 * t;
+    s_current = 0.5 * d2s_dt2 * t * t;
+
+    /* Updates velocity BC's */
+    u.n[right] = dirichlet(ds_dt);
+    u.t[top] = dirichlet(ds_dt);
+    u.n[left] = y < PLATE_WIDTH ? dirichlet(0.) : dirichlet(ds_dt);
+
+    boundary ((scalar *){u}); // Redefine boundary conditions for u
 }
 
 
