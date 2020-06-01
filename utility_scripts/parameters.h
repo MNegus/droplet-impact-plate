@@ -7,7 +7,7 @@ const double RHO_R = 0.00120; // Density ratio
 const double MU_R = 0.0183; // Viscosity ratio
 const double REYNOLDS = 4990; // Reynolds number
 const double WEBER = 342; // Weber number
-const double FR = 50.5 // Froude number
+const double FR = 50.5; // Froude number
 
 /* Droplet definition */
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
