@@ -22,6 +22,10 @@ const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
 /* Prescribed plate parameters (only used when plate velocity is prescribed) */
 const double PLATE_VEL = 0; // Velocity of the plate
 
+/* Constant acceleration (if wanted) */
+const int CONST_ACC = 0; // Set to 1 to specify a constant acceleration
+const double PLATE_ACC = 0.; // Acceleration of the plate
+
 /* Plate ODE terms (only used when plate is coupled). Corresponds to 
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
 const double ALPHA = 0.01; // Mass term

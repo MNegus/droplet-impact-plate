@@ -40,11 +40,12 @@ double d2s_dt2; // Second time derivative of s
 
 /* Boundary conditions */
 // Conditions for entry from above
-u.n[right] = dirichlet(0.); // Initial stationary flow above
+u.n[right] = neumann(0.); // Free flow condition
 p[right] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions far from the droplet in the radial direction
 u.n[top] = neumann(0.); // Allows outflow through boundary
+u.t[top] = dirichlet(0.); // Stationary vertical flow
 p[top] = dirichlet(0.); // 0 pressure far from surface
 
 // Conditions on surface
@@ -103,7 +104,7 @@ event init(t = 0) {
     foreach() {
         u.x[] = DROP_VEL * f[];
     }
-
+    boundary ((scalar *){u});
 }
 
 
@@ -156,16 +157,29 @@ event moving_plate (i++) {
     s_current = s_next; 
 
     /* OVERRIDE: CONSTANT ACCELERATION */
-    d2s_dt2 = 0.5;
-    ds_dt = d2s_dt2 * t;
-    s_current = 0.5 * d2s_dt2 * t * t;
+    if (CONST_ACC) {
+        if (t < IMPACT_TIME) {
+            d2s_dt2 = 0.;
+            ds_dt = 0.;
+            s_current = 0.;
+        } else {
+            d2s_dt2 = PLATE_ACC;
+            ds_dt = d2s_dt2 * (t - IMPACT_TIME);
+            s_current = 0.5 * d2s_dt2 * (t - IMPACT_TIME) * (t - IMPACT_TIME);
+        }
+    }
+
+
+    // EXPERIMENTAL PRESSURE
+    // p[right] = dirichlet(-0.5 * rho2 * ds_dt * ds_dt);
+    // p[top] = dirichlet(-0.5 * rho2 * ds_dt * ds_dt);
 
     /* Updates velocity BC's */
-    u.n[right] = dirichlet(ds_dt);
     u.t[top] = dirichlet(ds_dt);
     u.n[left] = y < PLATE_WIDTH ? dirichlet(0.) : dirichlet(ds_dt);
 
     boundary ((scalar *){u}); // Redefine boundary conditions for u
+    // boundary((scalar *){p}); // Redefine pressure BC
 }
 
 
@@ -215,8 +229,8 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
             force += y * Delta * (p[1, 0] + viscous_stress);
 
             /* Plate output */
-            fprintf(plate_output_file, "y = %g, p = %g, strss = %g\n",\
-                 y, p[1, 0], viscous_stress);
+            fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g\n",\
+                 y, x, p[1, 0], viscous_stress);
         }
 
         // Close plate output file
@@ -228,7 +242,7 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
 
         /* Outputs to force and volume to log file */
         fprintf(stderr, \
-            "t = %g, v = %g, F = %g, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
+            "t = %.8f, v = %.8f, F = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
             t, 2 * pi * statsf(f).sum, force, s_current, ds_dt, d2s_dt2);
     }
 }
