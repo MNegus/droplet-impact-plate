@@ -16,7 +16,7 @@ const double INITIAL_DROP_HEIGHT = 0.125; // Initial gap between drop and plate
 
 /* Plate definition */
 const double INITIAL_PLATE_TOP = 1.0; // Initial top of plate 
-const double PLATE_WIDTH = 3.0; // Width of plate (horizontal direction)
+const double PLATE_WIDTH = 2.0; // Width of plate (horizontal direction)
 const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
 
 /* Prescribed plate parameters (only used when plate velocity is prescribed) */
@@ -37,7 +37,7 @@ const int PLATE_REFINE_NO = 8; // Number of max refinement cells above plate
 const int MOVIES = 1; // Boolean for producing movies
 const int MINLEVEL = 4; // Minimum refinement level 
 const int MAXLEVEL = 10; // Maximum refinement level
-const double BOX_WIDTH = 4.0; // Width of the computational box
+const double BOX_WIDTH = 5.0; // Width of the computational box
 const double START_OUTPUT_TIME = 0.0; // Time to start outputs
 const double END_OUTPUT_TIME = 2.0; // Time to end outputs
 const double GFS_OUTPUT_TIMESTEP = 1e-2; // Time between gfs outputs
