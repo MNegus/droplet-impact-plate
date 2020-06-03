@@ -69,7 +69,8 @@ int main() {
     /* Derived constants */
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
     DROP_REFINED_WIDTH = 0.05; // Refined region around droplet
-    PLATE_REFINED_WIDTH = 0.3 * PLATE_THICKNESS; // Refined region around plate
+    PLATE_REFINED_WIDTH \
+        = PLATE_REFINE_NO * MIN_CELL_SIZE; // Refined region width around plate
     DROP_CENTRE = INITIAL_DROP_HEIGHT + DROP_RADIUS;
     IMPACT_TIME = INITIAL_DROP_HEIGHT / (-DROP_VEL);
 
@@ -112,11 +113,15 @@ event refinement (i++) {
 /* Refines the grid where appropriate */
 
     /* Adapts with respect to velocities and volume fraction */
-    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-2},
+    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-4},
         minlevel = MINLEVEL, maxlevel = MAXLEVEL);
     
     /* Refines above the plate */
-    refine((y < PLATE_WIDTH) && (x < 0.5 * PLATE_REFINED_WIDTH) \
+    refine((y < PLATE_WIDTH) && (x <= PLATE_REFINED_WIDTH) \
+        && level < MAXLEVEL);
+
+    /* Refines box around the origin for entrapped bubble */
+    refine((y < 0.05 * DROP_RADIUS) && (x < 0.05 * DROP_RADIUS) \
         && level < MAXLEVEL);
 }
 
@@ -135,7 +140,7 @@ event moving_plate (i++) {
 
             // Viscous stress in the cell above the plate
             double viscous_stress = \
-                 - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+                - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
 
             // Adds the contribution to the force using trapeze rule
             force += y * Delta * (p[1, 0] + viscous_stress);
@@ -197,8 +202,12 @@ event acceleration (i++) {
 event small_droplet_removal (i++) {
 /* Removes any small droplets or bubbles that have formed, that are smaller than
     a specific size */
-    // Removes droplets of diameter 5 cells or less
-    remove_droplets(f, 5);
+    // Removes droplets which have a diameter smaller than a quarter of the
+    // width of the refined plate region
+    remove_droplets(f, 0.25 * PLATE_REFINED_WIDTH);
+
+    // Remove bubbles of same size threshold
+    remove_droplets(f, 0.25 * PLATE_REFINED_WIDTH, true);
 }
 
 

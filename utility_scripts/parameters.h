@@ -33,6 +33,7 @@ const double BETA = 0; // Damping term
 const double GAMMA = 1; // Elastic term
 
 /* Computational constants */
+const int PLATE_REFINE_NO = 8; // Number of max refinement cells above plate
 const int MOVIES = 1; // Boolean for producing movies
 const int MINLEVEL = 4; // Minimum refinement level 
 const int MAXLEVEL = 10; // Maximum refinement level
