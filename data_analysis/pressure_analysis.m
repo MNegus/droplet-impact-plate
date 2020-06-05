@@ -14,9 +14,7 @@ addpath('pressures');
 
 % Parent directory where all of the data is stored under (e.g. external
 % hard drive location)
-% parent_directory = "/mnt/newarre/wall_force_test/";
-% parent_directory = "/mnt/newarre/embed_force_test/";
-parent_directory = "/mnt/newarre/acc_test/";
+parent_directory = "/mnt/newarre/a_1_test/";
 
 % Directory where the resulting videos are to be stored
 results_directory = sprintf("%s/Analysis", parent_directory);
@@ -24,10 +22,11 @@ results_directory = sprintf("%s/Analysis", parent_directory);
 % Individual directory names under the master directory. We assume that the
 % plate output files are stored under
 % master_directory/data_directory(k)/cleaned_data
-% data_directories = ["wall_test_12"];
-% data_directories = ["embed_test_12"];
-data_directories = ["constant_acc"];
+% data_directories = ["a_0", "a_0.25", "a_0.5", "a_0.75", "a_1"];
+data_directories = ["level_10", "level_11", "level_12", "level_13"];
+% data_directories = ["bubble_attempt"];
 no_dirs = length(data_directories); % Number of entries
+
 
 % Adds the parent directory to the start of the data directories
 for k = 1 : length(data_directories)
@@ -35,8 +34,9 @@ for k = 1 : length(data_directories)
 end
 
 % Readable names to label the plots for each of the data directories
-legend_entries = ...
-    ["Level 12"];
+% legend_entries = ["$a$ = 0", "$a$ = 0.25", "$a$ = 0.5", "$a$ = 0.75", ...
+%     "$a$ = 1"];
+legend_entries = ["Level 10", "Level 11", "Level 12", "Level 13"];
 
 %% Parameters
 % Physical parameters
@@ -50,11 +50,13 @@ p_dim = @(p) Patm + rho_w * U0^2 * p;
 r_millimetre = @(r) R0 * r * 1000;
 t_millisecond = @(t) T0 * t * 1000;
 
-% Stationary plate turnover point
-d = @(t) sqrt(3 * t);
-
 % (Constant) acceleration of the plate
-a = 0.5;
+a = 1.0;
+
+% Displacement of s
+s = @(t) 0.5 * a * t.^2;
+sdot = @(t) a * t;
+sddot = @(t) a;
 
 % Parameters common to the simulations to aid in visualisation
 initial_drop_height = 0.125; 
@@ -86,7 +88,7 @@ no_frames = end_pos - start_pos;
 
 % Finds computational turnover points
 read_comp_ds = dlmread(sprintf('%s/cleaned_data/turnover_points.txt', ...
-    data_directories(1)));
+    data_directories(end)));
 comp_ds = read_comp_ds(:, 2:3);
 
 % start_turnover_idx = find(read_comp_ds(:, 1) == start_pos);
@@ -108,7 +110,7 @@ ax.FontSize = 16;
 set(gca,'TickLabelInterpreter','latex');
 x_limits = [0, 1.25];
 xlim(r_millimetre(x_limits));
-ylim(p_dim([-0.1 15]));
+ylim(p_dim([-1 15]));
 
 % Creates animated line for the Wagner pressure
 outer_wagner_line = animatedline('color', 0.5 * [1 1 1], ...
@@ -126,9 +128,11 @@ comp_turnover_line = animatedline('color', 'blue', 'Linestyle', '--', ...
 % MAKE THIS SMARTER
 % Creates animated lines for the numerical results
 line1 = animatedline('Color', [0, 0.4470, 0.7410], 'Linewidth', 1.5);
-line2 = animatedline('Color', [0.8500    0.3250    0.0980], 'Linewidth', 1.5);
-line3 = animatedline('Color', [0.9290    0.6940    0.1250], 'Linewidth', 1.5);
-animlines = [line1, line2, line3];
+line2 = animatedline('Color', [0.8500, 0.3250, 0.0980], 'Linewidth', 1.5);
+line3 = animatedline('Color', [0.9290, 0.6940, 0.1250], 'Linewidth', 1.5);
+line4 = animatedline('Color', [0.4940, 0.1840, 0.5560], 'Linewidth', 1.5);
+% line5 = animatedline('Color', [0.4660, 0.6740, 0.1880], 'Linewidth', 1.5);
+animlines = [line1, line2, line3, line4];
 
 % Sets up the legend
 L = legend(["Outer", "Composite", "Wagner turnover point", ...
@@ -191,15 +195,19 @@ for m = start_pos : start_pos + no_frames -1
     % Wagner line
     if t >= impact_time
         
-        % Values of s for constant acceleration
-        s = 0.5 * a * (t - impact_time)^2;
-        sdot = a * (t - impact_time);
-        sddot = a;
+        % Values of s
+        s_val = s(t - impact_time);
+        sdot_val = sdot(t - impact_time);
+        sddot_val = sddot(t - impact_time);
+        
+        % Saves turnover point
+        [d, ~, ~, ~] = s_dependents(t - impact_time, s_val, sdot_val, ...
+            sddot_val);
         
         % Determines outer and composite solution
         [outer_rs, outer_ps, comp_rs, comp_ps] ...
-            = outer_and_comp_pressure(t - impact_time, s, sdot, sddot, 0, ...
-                1.25 * d(t), 1);
+            = outer_and_comp_pressure(t - impact_time, s_val, sdot_val, ...
+                sddot_val, 0, 1.25 * d, 1);
         
         % Adds outer pressure to graph
         clearpoints(outer_wagner_line);
@@ -219,7 +227,8 @@ for m = start_pos : start_pos + no_frames -1
         % Draws a vertical line where Wagner theory turnover point is
         clearpoints(wagner_turnover_line);
         addpoints(wagner_turnover_line, ...
-            r_millimetre(sqrt(3 * (t - impact_time))) * [1 1], p_dim([0 100]));
+            r_millimetre(d * [1 1]), ...
+            p_dim([0 100]));
         
         % Plots the computational turnover point
         clearpoints(comp_turnover_line);
@@ -234,7 +243,8 @@ for m = start_pos : start_pos + no_frames -1
     title(sprintf("Pressure: Accelerating frame. $t$ = %.4f ms, $t_0$ = %.4f ms",...
         t_millisecond(times(m, 2)), t_millisecond(impact_time)), ...
         "Interpreter", "latex", 'Fontsize', 15);
-    
+    xlim(r_millimetre(x_limits));
+    ylim(p_dim([-2 15]));
     drawnow;
     frame = getframe(gcf);
     writeVideo(writerObj, frame);

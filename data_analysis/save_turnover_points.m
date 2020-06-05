@@ -1,9 +1,9 @@
 function save_turnover_points(output_range, parent_dir, plate_position, ...
-    plate_tol)
+    plate_tol, bubble_box_width)
 %SAVE_TURNOVER_POINTS Saves the turnover points into a text file
 
 ds = turnover_points(output_range, parent_dir, plate_position, ...
-    plate_tol);
+    plate_tol, bubble_box_width);
 
 output_matrix = zeros(length(output_range), 3);
 output_matrix(:, 1) = output_range;
