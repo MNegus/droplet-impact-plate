@@ -204,10 +204,15 @@ event small_droplet_removal (i++) {
     a specific size */
     // Removes droplets which have a diameter smaller than a quarter of the
     // width of the refined plate region
-    remove_droplets(f, 0.25 * PLATE_REFINED_WIDTH);
+
+    // Size of minimum droplet
+    double min_drop_size = 0.001 * DROP_RADIUS;
+    int min_drop_cell_diameter = (int) ceil(min_drop_size / MIN_CELL_SIZE);
+
+    remove_droplets(f, min_drop_cell_diameter);
 
     // Remove bubbles of same size threshold
-    remove_droplets(f, 0.25 * PLATE_REFINED_WIDTH, true);
+    remove_droplets(f, min_drop_cell_diameter, true);
 }
 
 
