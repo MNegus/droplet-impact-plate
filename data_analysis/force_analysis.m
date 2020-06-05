@@ -11,9 +11,7 @@ addpath('pressures');
 
 % Parent directory where all of the data is stored under (e.g. external
 % hard drive location)
-% parent_directory = "/mnt/newarre/wall_force_test/";
-% parent_directory = "/mnt/newarre/embed_force_test/";
-parent_directory = "/mnt/newarre/acc_test/";
+parent_directory = "/mnt/newarre/";
 
 % Directory where the resulting videos are to be stored
 results_directory = sprintf("%s/Analysis", parent_directory);
@@ -21,11 +19,8 @@ results_directory = sprintf("%s/Analysis", parent_directory);
 % Individual directory names under the master directory. We assume that the
 % plate output files are stored under
 % master_directory/data_directory(k)/cleaned_data
-% data_directories = ["wall_test_10", "wall_test_11", "wall_test_12", "wall_test_13"];
-% data_directories = ["embed_test_10"];
-% data_directories = ["embed_test_10", "embed_test_11", "embed_test_12"]; 
-% data_directories = ["wall_test_10"];
-data_directories = ["constant_acc"];
+% data_directories = ["a_0", "a_0.25", "a_0.5", "a_0.75", "a_1"];
+data_directories = ["bubble_attempt"];
 no_dirs = length(data_directories); % Number of entries
 
 % Adds the parent directory to the start of the data directories
@@ -33,10 +28,7 @@ for k = 1 : length(data_directories)
     data_directories(k) = strcat(parent_directory, data_directories(k)); 
 end
 % Readable names to label the plots for each of the data directories
-% legend_entries = ["Level 10", "Level 11", "Level 12", "Level 13"];
-% legend_entries = ["Level 10", "Level 11", "Level 12"];
-% legend_entries = ["Level 10"];
-legend_entries = ["Level 12"];
+legend_entries = ["$a$ = 0"];
 
 %% Parameters
 % Physical parameters
@@ -53,7 +45,12 @@ F_dim = @(F) rho_w * U0^2 * R0^2 * F;
 initial_drop_height = 0.125; 
 
 % (Constant) acceleration of the plate
-a = 0.5;
+a = 0.0;
+
+% Displacement of s
+s = @(t) 0.5 * a * t.^2;
+sdot = @(t) a * t;
+sddot = @(t) a;
 
 % Position to start plots at 
 start_pos =  5;
@@ -79,8 +76,9 @@ end
 % Theoretical time of impact for a stationary plate
 impact_time = initial_drop_height;
 
-% Wagner theory force for stationary plate
-outer_force = @(t) 6 * sqrt(3) * sqrt(t - impact_time);
+% Wagner theory force for moving plate
+outer_force = @(t) 2 * sqrt(3 * (t - s(t))) ...
+    .* (3 * (1 - sdot(t)).^2 - 2 * sddot(t) .* (t - s(t)));
 
 % Array for calculated forces and pressures
 pressure_force = zeros(no_frames, no_dirs); % Force contribution from pressure
@@ -93,7 +91,6 @@ cutoff_pressure_force = zeros(no_frames, no_dirs); % Force contribution from pre
 % Times file
 times = dlmread(sprintf('%s/cleaned_data/plate_outputs/times.txt',...
                         data_directories(1)));
-
 
 % Integrated Wagner pressure
 integrated_outer_pressure = zeros(no_frames, 1);
@@ -108,17 +105,17 @@ for m = start_pos : end_pos
     
     % Integrated Wagner pressure
     if t >= impact_time
-        % Saves turnover point
-        [d, ~, ~, ~] = s_dependents(t - impact_time, 0, 0, 0);
+        s_val = s(t - impact_time);
+        sdot_val = sdot(t - impact_time);
+        sddot_val = sddot(t - impact_time);
         
-        % Values of s for constant acceleration
-        s = 0.5 * a * (t - impact_time)^2;
-        sdot = a * (t - impact_time);
-        sddot = a;
+        % Saves turnover point
+        [d, ~, ~, ~] = s_dependents(t - impact_time, s_val, sdot_val, ...
+            sddot_val);
         
         [outer_rs, outer_ps, comp_rs, comp_ps] ...
-            = outer_and_comp_pressure(t - impact_time, s, sdot, sddot, ...
-                0, 1.25 * d, 1);
+            = outer_and_comp_pressure(t - impact_time, s_val, sdot_val, ...
+            sddot_val, 0, 1.25 * d, 1);
             
         integrated_outer_pressure(m - start_pos + 1) ...
             = trapz(outer_rs, 2 * pi * outer_rs .* outer_ps);
@@ -158,18 +155,17 @@ for m = start_pos : end_pos
         % Saves values of r and pressure
         rs = sorted_mat(:, 1);
         ps = sorted_mat(:, 3);
-%         stress = sorted_mat(:, 4);
+        stress = sorted_mat(:, 4);
        
         % Calculate the forces using trapezoidal rule
         pressure_force(m - start_pos + 1, k) ...
             = trapz(rs, 2 * pi * rs .* ps);
-%         stress_force(m - start_pos + 1,  k) ...
-%             = trapz(rs, 2 * pi * rs .* stress);
+        stress_force(m - start_pos + 1,  k) ...
+            = trapz(rs, 2 * pi * rs .* stress);
         
         if (cutoff) && (t >= impact_time)
             % If jet is neglected, then remove any r values greater than a
             % specified cutoff
-%             cutoff = sqrt(3 * (t - impact_time))
             ps = ps(rs <= r_cutoff);
             rs = rs(rs <= r_cutoff);
             
@@ -196,16 +192,10 @@ dimen_ts = 1000 * T0 * output_ts;
 close all;
 figure(1);
 hold on;
-% plot(dimen_ts, F_dim(outer_force(output_ts)), 'color', 'black', ...
-%     'Linestyle', '--', 'Linewidth', 1);
-plot(dimen_ts, F_dim(integrated_outer_pressure), 'color', 'black', ...
+plot(dimen_ts, F_dim(outer_force(output_ts - impact_time)), 'color', 'black', ...
     'Linestyle', '--', 'Linewidth', 1);
-s = @(t) 0.5 * a * t.^2;
-sdot = @(t) a * t;
-sddot = @(t) a;
-outer_F = @(t) 4 * sqrt(3) * (-sddot(t) .* (t - s(t)).^1.5 ...
-    + (1 - sdot(t)).^2 .* sqrt(t - s(t)));
-plot(dimen_ts, F_dim(outer_F(output_ts - impact_time)));
+% plot(dimen_ts, F_dim(integrated_outer_pressure), 'color', 'black', ...
+%     'Linestyle', '--', 'Linewidth', 1);
 plot(dimen_ts, F_dim(integrated_composite_pressure), 'color', 'black', ...
     'Linestyle', '-.', 'Linewidth', 1);
 for k = 1 : no_dirs
@@ -214,14 +204,14 @@ for k = 1 : no_dirs
     plot(dimen_ts, F_dim(output_mat(plot_range, 3)));
 end
 grid on;
-legend(["Integrated outer", "Analytical outer", "Composite", legend_entries], "Interpreter", "latex", ...
-    'Location', 'northwest', 'fontsize', 12);
+legend(["Outer", "Composite", legend_entries], "Interpreter", "latex", ...
+    'Location', 'northeast', 'fontsize', 12);
 xlabel("$t$ / ms", "Interpreter", "latex", "Fontsize", 15);
 ylabel("Force / N", "Interpreter", "latex", "Fontsize", 15);
 ax = gca;
 ax.FontSize = 12;
 set(gca,'TickLabelInterpreter','latex');
-title("Force on plate: Moving frame. $a$ = 0.5", "Interpreter", "latex", ...
+title("Force on plate: Accelerating frame. $a$ = 0", "Interpreter", "latex", ...
     'Fontsize', 14);
 print(gcf, sprintf('%s/force_comparison.png', results_directory), ...
  '-dpng', '-r300');
