@@ -22,4 +22,4 @@ local_dir=${LOCAL_PARENT_DIR}/${SUB_DIR_NAME}
 mkdir ${local_dir}
 
 # Secure copies the parameters file and raw data
-scp -r ${remote_dir}/{code/parameters.h,raw_data} ${local_dir}
+scp -r ${remote_dir}/{code/parameters.h,code/*.c,raw_data} ${local_dir}
