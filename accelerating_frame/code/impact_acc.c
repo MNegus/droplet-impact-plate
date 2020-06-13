@@ -30,6 +30,8 @@ int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
 // Stores time the interface was outputted
 char interface_time_filename[80] = "interface_times.txt"; 
+double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
+
 
 /* Plate position variables */
 double s_previous = 0.; // Value of s at previous timestep
@@ -52,6 +54,10 @@ p[top] = dirichlet(0.); // 0 pressure far from surface
 u.n[left] = dirichlet(0.); // No flow through surface
 u.t[left] = dirichlet(0.); // No slip at surface
 
+
+void remove_droplets_region(struct RemoveDroplets p,\
+        double ignore_region_x_limit, double ignore_region_y_limit);
+        
 int main() {
 /* Main function to set up the simulation */
 
@@ -174,11 +180,6 @@ event moving_plate (i++) {
         }
     }
 
-
-    // EXPERIMENTAL PRESSURE
-    // p[right] = dirichlet(-0.5 * rho2 * ds_dt * ds_dt);
-    // p[top] = dirichlet(-0.5 * rho2 * ds_dt * ds_dt);
-
     /* Updates velocity BC's */
     u.t[top] = dirichlet(ds_dt);
     u.n[left] = y < PLATE_WIDTH ? dirichlet(0.) : dirichlet(ds_dt);
@@ -202,12 +203,38 @@ event acceleration (i++) {
 event small_droplet_removal (i++) {
 /* Removes any small droplets or bubbles that have formed, that are smaller than
     a specific size */
-    // Removes droplets which have a diameter smaller than a quarter of the
-    // width of the refined plate region
-    remove_droplets(f, 0.25 * PLATE_REFINED_WIDTH);
 
-    // Remove bubbles of same size threshold
-    remove_droplets(f, 0.25 * PLATE_REFINED_WIDTH, true);
+    /* Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
+    removed */
+    int drop_min_cell_width = 4;
+
+    // Threshold to specify if a cell is part of a drop/bubble
+    double drop_thresh = 1e-4;
+
+    /* Counts the number of bubbles there are */
+    scalar bubbles[];
+    foreach() {
+        bubbles[] = 1. - f[] > drop_thresh;
+    }
+    int bubble_no = tag(bubbles);
+
+    /* Determines if we are before or after the pinch-off time */
+    if (pinch_off_time == 0.) {
+        /* The first time the bubble number is above 1, we define it to be the 
+        pinch off time */
+        if (bubble_no > 1) {
+            pinch_off_time = t;
+        }
+    } else if (t >= pinch_off_time + REMOVAL_DELAY) {
+        /* If we are a certain time after the pinch-off time, remove drops and 
+        bubbles below the specified minimum size */
+
+        // Remove droplets
+        remove_droplets(f, drop_min_cell_width);
+
+        // Remove bubbles
+        remove_droplets(f, drop_min_cell_width, drop_thresh, true);
+    }
 }
 
 
@@ -229,17 +256,17 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         foreach_boundary(left, reduction(+:force)) {
             /* Force calculation */
             // Viscosity average in the cell above the plate
-            double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
+            double avg_mu = f[] * (mu1 - mu2) + mu2;
 
             // Viscous stress in the cell above the plate
-            double viscous_stress = - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+            double viscous_stress = - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
 
             // Adds the contribution to the force using trapeze rule
-            force += y * Delta * (p[1, 0] + viscous_stress);
+            force += y * Delta * (p[] + viscous_stress);
 
             /* Plate output */
             fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g\n",\
-                 y, x, p[1, 0], viscous_stress);
+                 y, x, p[], viscous_stress);
         }
 
         // Close plate output file
@@ -249,10 +276,21 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         // Integrates force about the angular part
         force = 2 * pi * force; 
 
-        /* Outputs to force and volume to log file */
+        /* Counts the number of droplets and bubbles there are */
+        scalar drops[];
+        scalar bubbles[];
+        foreach() {
+            drops[] = f[] > 1e-4;
+            bubbles[] = 1. - f[] >= 1e-4;
+        }
+        int drop_no = tag(drops);
+        int bubble_no = tag(bubbles);
+
+        /* Outputs data to log file */
         fprintf(stderr, \
-            "t = %.8f, v = %.8f, F = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
-            t, 2 * pi * statsf(f).sum, force, s_current, ds_dt, d2s_dt2);
+            "t = %.8f, v = %.8f, F = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g, drop_no = %d, bubble_no = %d\n", \
+            t, 2 * pi * statsf(f).sum, force, s_current, ds_dt, d2s_dt2, \ 
+            drop_no, bubble_no);
     }
 }
 
@@ -358,4 +396,39 @@ event end (t = MAX_TIME) {
 
     fprintf(stderr, "Finished after %g seconds\n", \
         end_wall_time - start_wall_time);
+}
+
+/* Alternative remove_droplets definitions */
+void remove_droplets_region(struct RemoveDroplets p,\
+        double ignore_region_x_limit, double ignore_region_y_limit) 
+{
+    scalar d[], f = p.f;
+    double threshold = p.threshold ? p.threshold : 1e-4;
+    foreach()
+    d[] = (p.bubbles ? 1. - f[] : f[]) > threshold;
+    int n = tag (d), size[n], keep_tags[n];
+
+    for (int i = 0; i < n; i++) {
+        size[i] = 0;
+        keep_tags[i] = 1;
+    }
+    foreach_leaf() {
+        if (d[] > 0) {
+            int j = ((int) d[]) - 1;
+            size[j]++;
+            if ((x < ignore_region_x_limit) && (y < ignore_region_y_limit)) {
+                keep_tags[j] = 0;
+            }
+        }
+    }
+    #if _MPI
+    MPI_Allreduce (MPI_IN_PLACE, size, n, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+    #endif
+    int minsize = pow (p.minsize ? p.minsize : 3, dimension);
+    foreach() {
+        int j = ((int) d[]) - 1;
+        if (d[] > 0 && size[j] < minsize && keep_tags[j] == 1)
+            f[] = p.bubbles;
+    }
+    boundary ({f});
 }

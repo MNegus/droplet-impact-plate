@@ -44,3 +44,4 @@ const double GFS_OUTPUT_TIMESTEP = 1e-2; // Time between gfs outputs
 const double PLATE_OUTPUT_TIMESTEP = 1e-3; // Time between plate outputs
 const double INTERFACE_OUTPUT_TIMESTEP = 1e-3; // Time between interface outputs
 const double HARD_MAX_TIME = 2.0; // Hard maximum time 
+const double REMOVAL_DELAY = 0.02; // Time after pinch-off to start removal
