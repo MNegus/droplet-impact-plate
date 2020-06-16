@@ -14,7 +14,7 @@ addpath('pressures');
 
 % Parent directory where all of the data is stored under (e.g. external
 % hard drive location)
-parent_directory = "/mnt/newarre/a_1_test/";
+parent_directory = "/mnt/newarre/a_1_runs/";
 
 % Directory where the resulting videos are to be stored
 results_directory = sprintf("%s/Analysis", parent_directory);
@@ -23,7 +23,7 @@ results_directory = sprintf("%s/Analysis", parent_directory);
 % plate output files are stored under
 % master_directory/data_directory(k)/cleaned_data
 % data_directories = ["a_0", "a_0.25", "a_0.5", "a_0.75", "a_1"];
-data_directories = ["level_10", "level_11", "level_12", "level_13"];
+data_directories = ["level_10", "level_11", "level_12"];
 % data_directories = ["bubble_attempt"];
 no_dirs = length(data_directories); % Number of entries
 
@@ -36,7 +36,7 @@ end
 % Readable names to label the plots for each of the data directories
 % legend_entries = ["$a$ = 0", "$a$ = 0.25", "$a$ = 0.5", "$a$ = 0.75", ...
 %     "$a$ = 1"];
-legend_entries = ["Level 10", "Level 11", "Level 12", "Level 13"];
+legend_entries = ["Level 10", "Level 11", "Level 12"];
 
 %% Parameters
 % Physical parameters
@@ -81,7 +81,7 @@ times = dlmread(sprintf('%s/cleaned_data/plate_outputs/times.txt', data_director
 
 % Position to start video at
 start_pos =  115;
-end_pos = 600;
+end_pos = 900;
 
 output_range = start_pos : end_pos;
 no_frames = end_pos - start_pos;
