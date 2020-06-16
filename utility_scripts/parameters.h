@@ -28,9 +28,9 @@ const double PLATE_ACC = 0.; // Acceleration of the plate
 
 /* Plate ODE terms (only used when plate is coupled). Corresponds to 
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
-const double ALPHA = 0.01; // Mass term
-const double BETA = 0; // Damping term
-const double GAMMA = 1; // Elastic term
+const double ALPHA = 1.; // Mass term
+const double BETA = 0.; // Damping term
+const double GAMMA = 0.; // Elastic term
 
 /* Computational constants */
 const int PLATE_REFINE_NO = 8; // Number of max refinement cells above plate
@@ -45,3 +45,5 @@ const double PLATE_OUTPUT_TIMESTEP = 1e-3; // Time between plate outputs
 const double INTERFACE_OUTPUT_TIMESTEP = 1e-3; // Time between interface outputs
 const double HARD_MAX_TIME = 2.0; // Hard maximum time 
 const double REMOVAL_DELAY = 0.02; // Time after pinch-off to start removal
+const int AVG_FORCE_NO = 4; // Number of timesteps to average the force over
+const double FORCE_DELAY_TIME = 0.01; // Delay time before force is applied on plate

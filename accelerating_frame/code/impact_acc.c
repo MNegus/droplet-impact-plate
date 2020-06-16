@@ -31,7 +31,12 @@ int interface_output_no = 1; // Records how many interface files there have been
 // Stores time the interface was outputted
 char interface_time_filename[80] = "interface_times.txt"; 
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
+double drop_thresh = 1e-4; // Remove droplets threshold
 
+/* Force averaging */
+double *forces_array; // Forces of the previous timesteps
+double force_avg; // Average force
+double current_force; // Current force on plate
 
 /* Plate position variables */
 double s_previous = 0.; // Value of s at previous timestep
@@ -57,7 +62,13 @@ u.t[left] = dirichlet(0.); // No slip at surface
 
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit);
-        
+
+
+/* INITIALISATION EVENTS
+    These events initialse the problem
+*/
+
+
 int main() {
 /* Main function to set up the simulation */
 
@@ -89,6 +100,13 @@ int main() {
     FILE* interface_time_file = fopen(interface_time_filename, "w");
     fclose(interface_time_file);
 
+    /* Allocates array for forces */
+    forces_array = malloc(sizeof(double) * AVG_FORCE_NO);
+
+    for (int j = 0; j < AVG_FORCE_NO - 1; j++) 
+        forces_array[j] = 0;
+    
+
     run(); // Runs the simulation
 }
 
@@ -114,49 +132,74 @@ event init(t = 0) {
     boundary ((scalar *){u});
 }
 
-
-event refinement (i++) {
-/* Refines the grid where appropriate */
-
-    /* Adapts with respect to velocities and volume fraction */
-    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-4},
-        minlevel = MINLEVEL, maxlevel = MAXLEVEL);
-    
-    /* Refines above the plate */
-    refine((y < PLATE_WIDTH) && (x <= PLATE_REFINED_WIDTH) \
-        && level < MAXLEVEL);
-
-    /* Refines box around the origin for entrapped bubble */
-    refine((y < 0.05 * DROP_RADIUS) && (x < 0.05 * DROP_RADIUS) \
-        && level < MAXLEVEL);
-}
+/* CALCULATION AND OUTPUT EVENTS
+    These events calculate statistics (such as force) and output data about the 
+    system, but do not alter it
+*/
 
 
-event moving_plate (i++) {
-/* Moves the plate as a function of the force on it */
+event forces(i++) {
+/* Calculates the force felt on the plate */
 
-    /* Calculate the force on the plate by integrating using trapeze rule*/
-    double force = 0.; // Initialise to be zero
+    // Initialises the current_force variable
+    current_force = 0;
 
     // Iterates over the solid boundary
-    foreach_boundary(left, reduction(+:force)) {
+    foreach_boundary(left, reduction(+:current_force)) {
         if (y < PLATE_WIDTH) {
             // Viscosity average in the cell above the plate
-            double avg_mu = f[1, 0] * (mu1 - mu2) + mu2;
+            double avg_mu = f[] * (mu1 - mu2) + mu2;
 
             // Viscous stress in the cell above the plate
             double viscous_stress = \
-                - 2 * avg_mu * (u.x[2, 0] - u.x[1, 0]) / Delta;
+                - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
 
             // Adds the contribution to the force using trapeze rule
-            force += y * Delta * (p[1, 0] + viscous_stress);
+            current_force += y * Delta * (p[] + viscous_stress);
         }
     }
 
-    force = 2 * pi * force; // Integrates about the angular part
+    // Integrates force over the angular part
+    current_force = 2 * pi * current_force;
 
-    /* Solves the ODE for the updated plate position and acceleration */
-    s_next = (dt * dt * force \
+    /* Force averaging. Calculates the average force over the last AVG_FORCE_NO
+    timesteps */
+    force_avg = 0; // Initialise to be zero
+
+    /* Loops over the forces_array, discarding the oldest element and adding the
+    newest */
+    #pragma omp critical
+    for (int j = 0; j < AVG_FORCE_NO - 1; j++) {
+        // Shifts the items one back
+        forces_array[j] = forces_array[j + 1];
+
+        // Increments the average
+        force_avg += forces_array[j];
+    }
+    // Adds the current foce value to the array and force average
+    forces_array[AVG_FORCE_NO - 1] = current_force;
+    force_avg += forces_array[AVG_FORCE_NO - 1];
+
+    // Calculates the force average
+    force_avg = force_avg / ((double) AVG_FORCE_NO);
+}
+
+
+event plate_derivatives(i++) {
+/* Calculates the derivatives of the plate position */
+
+    /* Calculates force term. If we are before FORCE_DELAY_TIME, we apply no 
+    force, else we apply the averaged force, force_avg */
+    double force_term;
+    if (t < FORCE_DELAY_TIME) {
+        force_term = 0.;
+    } else {
+        force_term = force_avg;
+    }
+
+    /* Solves the ODE for the updated plate position and acceleration, with the
+    averaged force */
+    s_next = (dt * dt * force_term \
         + (2. * ALPHA - dt * dt * GAMMA) * s_current \
         - (ALPHA - dt * BETA / 2.) * s_previous) \
         / (ALPHA + dt * BETA / 2.);
@@ -179,118 +222,44 @@ event moving_plate (i++) {
             s_current = 0.5 * d2s_dt2 * (t - IMPACT_TIME) * (t - IMPACT_TIME);
         }
     }
-
-    /* Updates velocity BC's */
-    u.t[top] = dirichlet(ds_dt);
-    u.n[left] = y < PLATE_WIDTH ? dirichlet(0.) : dirichlet(ds_dt);
-
-    boundary ((scalar *){u}); // Redefine boundary conditions for u
-    // boundary((scalar *){p}); // Redefine pressure BC
 }
-
-
-event acceleration (i++) {
-/* Adds acceleration due to gravity and the moving plate at each time step */
-    face vector av = a; // Acceleration at each face
-
-    /* Adds acceleration due to gravity and the plate */
-    foreach_face(x){
-        av.x[] += d2s_dt2 - 1./sq(FR);
-    }
-}
-
-
-event small_droplet_removal (i++) {
-/* Removes any small droplets or bubbles that have formed, that are smaller than
-    a specific size */
-
-    /* Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
-    removed */
-    int drop_min_cell_width = 4;
-
-    // Threshold to specify if a cell is part of a drop/bubble
-    double drop_thresh = 1e-4;
-
-    /* Counts the number of bubbles there are */
-    scalar bubbles[];
-    foreach() {
-        bubbles[] = 1. - f[] > drop_thresh;
-    }
-    int bubble_no = tag(bubbles);
-
-    /* Determines if we are before or after the pinch-off time */
-    if (pinch_off_time == 0.) {
-        /* The first time the bubble number is above 1, we define it to be the 
-        pinch off time */
-        if (bubble_no > 1) {
-            pinch_off_time = t;
-        }
-    } else if (t >= pinch_off_time + REMOVAL_DELAY) {
-        /* If we are a certain time after the pinch-off time, remove drops and 
-        bubbles below the specified minimum size */
-
-        // Remove droplets
-        remove_droplets(f, drop_min_cell_width);
-
-        // Remove bubbles
-        remove_droplets(f, drop_min_cell_width, drop_thresh, true);
-    }
-}
-
 
 event output_data (t += PLATE_OUTPUT_TIMESTEP) {
 /* Outputs data about the flow*/
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
-        // Creates the file for outputting data along the plate
+
         char plate_output_filename[80];
         sprintf(plate_output_filename, "plate_output_%d.txt", plate_output_no);
         FILE *plate_output_file = fopen(plate_output_filename, "w");
-
+        
         // Adds the time to the first line of the file
         fprintf(plate_output_file, "t = %g\n", t);
 
-        // Initialises the force variable
-        double force = 0.; 
+        // Iterates over the solid boundary
+        foreach_boundary(left) {
+            if (y < PLATE_WIDTH) {
+                // Viscosity average in the cell above the plate
+                double avg_mu = f[] * (mu1 - mu2) + mu2;
 
-        // Loops over the left hand boundary (the interface)
-        foreach_boundary(left, reduction(+:force)) {
-            /* Force calculation */
-            // Viscosity average in the cell above the plate
-            double avg_mu = f[] * (mu1 - mu2) + mu2;
-
-            // Viscous stress in the cell above the plate
-            double viscous_stress = - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
-
-            // Adds the contribution to the force using trapeze rule
-            force += y * Delta * (p[] + viscous_stress);
-
-            /* Plate output */
-            fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g\n",\
-                 y, x, p[], viscous_stress);
+                // Viscous stress in the cell above the plate
+                double viscous_stress = \
+                    - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
+   
+                /* Plate output */
+                fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g\n",\
+                    y, x, p[], viscous_stress);
+            }
         }
-
+    
         // Close plate output file
         fclose(plate_output_file);
         plate_output_no++; // Increments output number
 
-        // Integrates force about the angular part
-        force = 2 * pi * force; 
 
-        /* Counts the number of droplets and bubbles there are */
-        scalar drops[];
-        scalar bubbles[];
-        foreach() {
-            drops[] = f[] > 1e-4;
-            bubbles[] = 1. - f[] >= 1e-4;
-        }
-        int drop_no = tag(drops);
-        int bubble_no = tag(bubbles);
-
-        /* Outputs data to log file */
         fprintf(stderr, \
-            "t = %.8f, v = %.8f, F = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g, drop_no = %d, bubble_no = %d\n", \
-            t, 2 * pi * statsf(f).sum, force, s_current, ds_dt, d2s_dt2, \ 
-            drop_no, bubble_no);
+            "t = %.8f, v = %.8f, F = %.8f, F_avg = %g, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
+            t, 2 * pi * statsf(f).sum, current_force, force_avg, s_current, ds_dt, d2s_dt2);
+        
     }
 }
 
@@ -389,23 +358,126 @@ event movies (t += 0.005) {
 }
 
 
+/* ALTERING EVENTS
+    These events alter the flow in some way, through refinement, adding 
+    boundary conditions, adding acceleration terms and removal. 
+*/
+
+event refinement (i++) {
+/* Refines the grid where appropriate */
+
+    /* Adapts with respect to velocities and volume fraction */
+    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-4},
+        minlevel = MINLEVEL, maxlevel = MAXLEVEL);
+    
+    /* Refines above the plate */
+    refine((y < PLATE_WIDTH) && (x <= PLATE_REFINED_WIDTH) \
+        && level < MAXLEVEL);
+
+    /* Refines box around the origin for entrapped bubble */
+    refine((y < 0.05 * DROP_RADIUS) && (x < 0.05 * DROP_RADIUS) \
+        && level < MAXLEVEL);
+}
+
+
+event moving_plate (i++) {
+/* Moves the plate as a function of the force on it */
+    /* Updates velocity BC's */
+    u.t[top] = dirichlet(ds_dt);
+    u.n[left] = y < PLATE_WIDTH ? dirichlet(0.) : dirichlet(ds_dt);
+
+    boundary ((scalar *){u}); // Redefine boundary conditions for u
+}
+
+
+event acceleration (i++) {
+/* Adds acceleration due to gravity and the moving plate at each time step */
+    face vector av = a; // Acceleration at each face
+
+    /* Adds acceleration due to gravity and the plate */
+    foreach_face(x){
+        av.x[] += d2s_dt2 - 1./sq(FR);
+    }
+}
+
+
+event small_droplet_removal (i++) {
+/* Removes any small droplets or bubbles that have formed, that are smaller than
+    a specific size */
+
+    /* Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
+    removed */
+    int drop_min_cell_width = 4;
+
+    /* Region to ignore */
+    double ignore_region_x_limit = 0.01;
+    double ignore_region_y_limit = 2.0 * 0.05;
+    
+    /* Counts the number of bubbles there are */
+    scalar bubbles[];
+    foreach() {
+        bubbles[] = 1. - f[] > drop_thresh;
+    }
+    int bubble_no = tag(bubbles);
+
+    /* Determines if we are before or after the pinch-off time */
+    if (pinch_off_time == 0.) {
+        /* The first time the bubble number is above 1, we define it to be the 
+        pinch off time */
+        if (bubble_no > 1) {
+            pinch_off_time = t;
+        }
+    // } else if (t >= pinch_off_time + REMOVAL_DELAY) {
+    } else if (t >= pinch_off_time + 0.01) {
+        /* If we are a certain time after the pinch-off time, remove drops and 
+        bubbles below the specified minimum size */
+
+        struct RemoveDroplets remove_struct;
+        remove_struct.f = f;
+        remove_struct.minsize = drop_min_cell_width;
+        remove_struct.threshold = drop_thresh;
+        remove_struct.bubbles = false;
+
+        // Remove droplets
+        remove_droplets(remove_struct);
+
+        // Remove bubbles
+        remove_struct.bubbles = true;
+        remove_droplets(remove_struct);
+
+        // Remove any bubbles left in the ignore region
+        foreach() {
+            if (x < ignore_region_x_limit && y < ignore_region_y_limit) {
+                f[] = 1.;
+            }
+        }
+    }
+
+}
+
+
+/* END */
 event end (t = MAX_TIME) {
 /* Ends the simulation */ 
 
     end_wall_time = omp_get_wtime(); // Records the time of finish
 
+    free(forces_array);
+
     fprintf(stderr, "Finished after %g seconds\n", \
         end_wall_time - start_wall_time);
 }
 
+/* FUNCTION DECLARATIONS */
+
 /* Alternative remove_droplets definitions */
 void remove_droplets_region(struct RemoveDroplets p,\
-        double ignore_region_x_limit, double ignore_region_y_limit) 
-{
+        double ignore_region_x_limit, double ignore_region_y_limit) {
     scalar d[], f = p.f;
     double threshold = p.threshold ? p.threshold : 1e-4;
-    foreach()
-    d[] = (p.bubbles ? 1. - f[] : f[]) > threshold;
+    foreach() {
+        d[] = (p.bubbles ? 1. - f[] : f[]) > threshold;
+    }
     int n = tag (d), size[n], keep_tags[n];
 
     for (int i = 0; i < n; i++) {
