@@ -11,7 +11,7 @@ addpath('pressures');
 
 % Parent directory where all of the data is stored under (e.g. external
 % hard drive location)
-parent_directory = "/mnt/newarre/";
+parent_directory = "/mnt/newarre/a_1_runs/";
 
 % Directory where the resulting videos are to be stored
 results_directory = sprintf("%s/Analysis", parent_directory);
@@ -19,8 +19,8 @@ results_directory = sprintf("%s/Analysis", parent_directory);
 % Individual directory names under the master directory. We assume that the
 % plate output files are stored under
 % master_directory/data_directory(k)/cleaned_data
-% data_directories = ["a_0", "a_0.25", "a_0.5", "a_0.75", "a_1"];
-data_directories = ["bubble_attempt"];
+% data_directories = ["level_10", "level_11", "level_12"];
+data_directories = ["level_12_refine_no_12"];
 no_dirs = length(data_directories); % Number of entries
 
 % Adds the parent directory to the start of the data directories
@@ -28,7 +28,8 @@ for k = 1 : length(data_directories)
     data_directories(k) = strcat(parent_directory, data_directories(k)); 
 end
 % Readable names to label the plots for each of the data directories
-legend_entries = ["$a$ = 0"];
+% legend_entries = ["Level 10", "Level 11", "Level 12"];
+legend_entries = ["Level 12"];
 
 %% Parameters
 % Physical parameters
@@ -45,7 +46,7 @@ F_dim = @(F) rho_w * U0^2 * R0^2 * F;
 initial_drop_height = 0.125; 
 
 % (Constant) acceleration of the plate
-a = 0.0;
+a = 1.0;
 
 % Displacement of s
 s = @(t) 0.5 * a * t.^2;
@@ -54,12 +55,12 @@ sddot = @(t) a;
 
 % Position to start plots at 
 start_pos =  5;
-end_pos = 600;
+end_pos = 900;
 no_frames = end_pos - start_pos;
 plot_range = start_pos : end_pos;
 
 % If true, then the jet is neglected in the force calculation
-cutoff = false;
+cutoff = true;
 
 % Finds computational turnover points
 if cutoff
@@ -194,8 +195,6 @@ figure(1);
 hold on;
 plot(dimen_ts, F_dim(outer_force(output_ts - impact_time)), 'color', 'black', ...
     'Linestyle', '--', 'Linewidth', 1);
-% plot(dimen_ts, F_dim(integrated_outer_pressure), 'color', 'black', ...
-%     'Linestyle', '--', 'Linewidth', 1);
 plot(dimen_ts, F_dim(integrated_composite_pressure), 'color', 'black', ...
     'Linestyle', '-.', 'Linewidth', 1);
 for k = 1 : no_dirs
@@ -203,8 +202,14 @@ for k = 1 : no_dirs
         data_directories(k)));
     plot(dimen_ts, F_dim(output_mat(plot_range, 3)));
 end
+
+plot(dimen_ts, F_dim(integrated_cutoff_pressure), 'color', 'black', ...
+    'Linestyle', ':', 'Linewidth', 1);
+for k = 1 : no_dirs
+   plot(dimen_ts, F_dim(cutoff_pressure_force(:, k)));
+end
 grid on;
-legend(["Outer", "Composite", legend_entries], "Interpreter", "latex", ...
+legend(["Outer", "Composite", legend_entries, "Cutoff composite", "Cutoff level 12"], "Interpreter", "latex", ...
     'Location', 'northeast', 'fontsize', 12);
 xlabel("$t$ / ms", "Interpreter", "latex", "Fontsize", 15);
 ylabel("Force / N", "Interpreter", "latex", "Fontsize", 15);
