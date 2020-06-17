@@ -51,7 +51,7 @@ sed -e "s/drop_no = //g" -i ${CLEANED_DATA_DIR}/output.txt
 echo Cleaned log file
 
 # Moves the log file into the main directory, for more easy access
-mv ${RAW_DATA_DIR}/log ${PARENT_DIR}
+cp ${RAW_DATA_DIR}/log ${PARENT_DIR}
 
 ################################################################################
 # Moves the videos into a separate directory
