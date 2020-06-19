@@ -33,11 +33,11 @@ const double BETA = 0.; // Damping term
 const double GAMMA = 0.; // Elastic term
 
 /* Computational constants */
-const int PLATE_REFINE_NO = 8; // Number of max refinement cells above plate
+const int PLATE_REFINE_NO = 4; // Number of max refinement cells above plate
 const int MOVIES = 1; // Boolean for producing movies
 const int MINLEVEL = 4; // Minimum refinement level 
 const int MAXLEVEL = 10; // Maximum refinement level
-const double BOX_WIDTH = 5.0; // Width of the computational box
+const double BOX_WIDTH = 3.0; // Width of the computational box
 const double START_OUTPUT_TIME = 0.0; // Time to start outputs
 const double END_OUTPUT_TIME = 2.0; // Time to end outputs
 const double GFS_OUTPUT_TIMESTEP = 1e-2; // Time between gfs outputs
@@ -47,3 +47,6 @@ const double HARD_MAX_TIME = 2.0; // Hard maximum time
 const double REMOVAL_DELAY = 0.02; // Time after pinch-off to start removal
 const int AVG_FORCE_NO = 4; // Number of timesteps to average the force over
 const double FORCE_DELAY_TIME = 0.01; // Delay time before force is applied on plate
+const int REMOVE_ENTRAPMENT = 0; // If 1, completely remove entrapped air
+const int INTERP_FORCE = 0; // If 1, force is interpolated
+const int INTERP_FORCE_THRESHOLD = 0.1; // Fractional difference to interpolate
