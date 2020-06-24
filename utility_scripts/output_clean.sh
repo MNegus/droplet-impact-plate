@@ -47,6 +47,7 @@ sed -e "s/f_avg = //g" -i ${CLEANED_DATA_DIR}/output.txt
 sed -e "s/s = //g" -i ${CLEANED_DATA_DIR}/output.txt
 sed -e "s/bubble_no = //g" -i ${CLEANED_DATA_DIR}/output.txt
 sed -e "s/drop_no = //g" -i ${CLEANED_DATA_DIR}/output.txt
+sed -e "s/force_term = //g" -i ${CLEANED_DATA_DIR}/output.txt
 
 echo Cleaned log file
 
