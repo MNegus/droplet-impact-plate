@@ -279,7 +279,7 @@ event small_droplet_removal (i += 5) { // RC doing this every n iterations or ev
 
     // Region to ignore
     double ignore_region_x_limit = 0.02; //0.01;
-    double ignore_region_y_limit = 0.02; //2.2 * 0.05;
+    double ignore_region_y_limit = 0.03; //2.2 * 0.05;
     
     // Counts the number of bubbles there are
     scalar bubbles[];
@@ -344,8 +344,8 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
             double viscous_stress = - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
 
             /* Plate output */
-            fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g\n",\
-                 y, x, p[], viscous_stress);
+            fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g, f = %g\n",\
+                 y, x, p[], viscous_stress, f[]);
         }
 
         // Close plate output file

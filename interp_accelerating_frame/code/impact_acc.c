@@ -39,10 +39,11 @@ char interface_time_filename[80] = "interface_times.txt";
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
 
-/* Force averaging */
-double *forces_array; // Forces of the previous timesteps
-double force_avg; // Average force
+/* Force interpolation */
+double forces_array[2]; // Forces of the previous timesteps
+double times_array[2]; // Times of the previous timesteps
 double current_force; // Current force on plate
+double force_term; // Force term used in the ODE 
 
 /* Plate position variables */
 double s_previous = 0.; // Value of s at previous timestep
@@ -52,6 +53,7 @@ double ds_dt; // First time derivative of s
 double d2s_dt2; // Second time derivative of s
 
 FILE * fp_stats; // RC
+char interp_stats_filename[80] = "interp_stats.txt";
 
 vector h[];  // RC
 double theta0 = 90;  // RC
@@ -105,6 +107,10 @@ int main() {
     FILE* interface_time_file = fopen(interface_time_filename, "w");
     fclose(interface_time_file);
 
+    /* Initialises interp stats file */
+    FILE * interp_stats_file = fopen(interp_stats_filename, "w");
+    fclose(interp_stats_file);
+
     // RC
     {
       char name[200];
@@ -118,17 +124,9 @@ int main() {
     NITERMAX = 400; // default 100
     TOLERANCE = 1e-5; // default 1e-3
 
-
-    /* Allocates array for forces */
-    forces_array = malloc(sizeof(double) * AVG_FORCE_NO);
-    for (int j = 0; j < AVG_FORCE_NO - 1; j++) 
-        forces_array[j] = 0;
-
-
     run();
 
     fclose(fp_stats); // RC
-    free(forces_array);
 }
 
 
@@ -195,36 +193,77 @@ event moving_plate (i++) {
 
     current_force = 2 * pi * current_force; // Integrates about the angular part
 
-    /* Force averaging. Calculates the average force over the last AVG_FORCE_NO
-    timesteps */
-    force_avg = 0; // Initialise to be zero
-
-    /* Loops over the forces_array, discarding the oldest element and adding the
-    newest */
-    #pragma omp critical
-    for (int j = 0; j < AVG_FORCE_NO - 1; j++) {
-        // Shifts the items one back
-        forces_array[j] = forces_array[j + 1];
-
-        // Increments the average
-        force_avg += forces_array[j];
-    }
-    // Adds the current foce value to the array and force average
-    forces_array[AVG_FORCE_NO - 1] = current_force;
-    force_avg += forces_array[AVG_FORCE_NO - 1];
-
-    // Calculates the force average
-    force_avg = force_avg / ((double) AVG_FORCE_NO);
+    /* Force interpolation. If the current value of force has deviated from the
+    previous value by too much, then we instead interpolate the last two values
+    to calculate an approximation for this timestep */
     
+    if (INTERPOLATE) {
+        if (i < 2) {
+            /* For at least the first two timesteps, we need to simply record the values
+            of the force and the timesteps. We set the force term to be zero */ 
+            forces_array[i] = current_force;
+            times_array[i] = t;
+
+            force_term = current_force;
+        } else if (t < INTERP_DELAY)  {
+            /* We update the forces and the times arrays, but do no interpolation*/
+            forces_array[0] = forces_array[1];
+            forces_array[1] = current_force;
+
+            times_array[0] = times_array[1];
+            times_array[1] = t;
+
+            force_term = current_force;
+        } else {
+            /* We check if the current force has increased or decreased from the 
+            previous force by the amount specified by the threshold. If it has, we 
+            instead use the interpolation of the last two forces as the force 
+            term */
+            double previous_force = forces_array[1];
+
+            if (current_force > previous_force - INTERP_FORCE_THRESHOLD \
+                && current_force < previous_force + INTERP_FORCE_THRESHOLD){
+
+                force_term = current_force;
+            } else {
+                /* The force has deviated largely from the last timestep, so we 
+                instead take the force term in the ODE to be a linear interpolation
+                of the force from the last two timesteps */
+
+                // Gradient of line
+                double gradient = (forces_array[1] - forces_array[0]) \
+                    / (times_array[1] - times_array[0]);
+
+                // Set the new force term as the interpolate
+                force_term = forces_array[1] + gradient * (t - times_array[1]) ;
+
+                
+
+                // Output stats on interpolation
+                FILE *interp_stats_file = fopen(interp_stats_filename, "a");
+                fprintf(interp_stats_file, "t = %g, F = %g, F0 = %g, t0 = %g, F1 = %g, t1 = %g, F_int = %g\n", \
+                t, current_force, forces_array[0], times_array[0], forces_array[1], times_array[1], force_term);
+                fprintf(interp_stats_file, "lower_thresh = %g, upper_thresh = %g\n",\
+                (1. - INTERP_FORCE_THRESHOLD) * previous_force, (1. + INTERP_FORCE_THRESHOLD) * previous_force);
+                fprintf(interp_stats_file, "\n");
+                fclose(interp_stats_file);
+            }
+
+            forces_array[0] = forces_array[1];
+            forces_array[1] = force_term;
+
+            times_array[0] = times_array[1];
+            times_array[1] = t;
+
+        }
+    } else {
+        force_term = current_force;
+    }
+
+
+    if (t < FORCE_DELAY_TIME) force_term = 0;
 
     /* Solves the ODE for the updated plate position and acceleration */
-    double force_term;
-    if (t < FORCE_DELAY_TIME) {
-        force_term = 0.;
-    } else {
-        force_term = force_avg;
-    }
-
     s_next = (dt * dt * force_term \
         + (2. * ALPHA - dt * dt * GAMMA) * s_current \
         - (ALPHA - dt * BETA / 2.) * s_previous) \
@@ -352,21 +391,20 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         fclose(plate_output_file);
         plate_output_no++; // Increments output number
 
-        /* Counts the number of droplets and bubbles there are */
-        scalar drop_field[];
-        scalar bubble_field[];
-        foreach() {
-            drop_field[] = f[] > drop_thresh;
-            bubble_field[] = 1. - f[] > drop_thresh;
-        }
-        int curr_drop_no = tag(drop_field);
-        int curr_bubble_no = tag(bubble_field);
+        // /* Counts the number of droplets and bubbles there are */
+        // scalar drop_field[];
+        // scalar bubble_field[];
+        // foreach() {
+        //     drop_field[] = f[] > drop_thresh;
+        //     bubble_field[] = 1. - f[] > drop_thresh;
+        // }
+        // int curr_drop_no = tag(drop_field);
+        // int curr_bubble_no = tag(bubble_field);
 
         /* Outputs data to log file */
         fprintf(stderr, \
-            "t = %.8f, v = %.8f, F = %.8f, F_avg = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g, drop_no = %d, bubble_no = %d\n", \
-            t, 2 * pi * statsf(f).sum, current_force, force_avg, s_current, ds_dt, d2s_dt2, \ 
-            curr_drop_no, curr_bubble_no);
+            "t = %.8f, v = %.8f, F = %.8f, force_term = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
+            t, 2 * pi * statsf(f).sum, current_force, force_term, s_current, ds_dt, d2s_dt2);
     }
 }
 

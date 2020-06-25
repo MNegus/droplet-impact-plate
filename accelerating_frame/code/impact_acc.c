@@ -246,8 +246,8 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
                     - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
    
                 /* Plate output */
-                fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g\n",\
-                    y, x, p[], viscous_stress);
+                fprintf(plate_output_file, "y = %g, x = %g, p = %g, strss = %g, f = %g\n",\
+                    y, x, p[], viscous_stress, f[]);
             }
         }
     
@@ -299,24 +299,27 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 }
 
 
-event movies (t += 0.005) {
+event movies (t += 0.001) {
 /* Produces movies using bview */ 
     if (MOVIES) {
         // Creates a string with the time to put on the plots
         char time_str[80];
         sprintf(time_str, "t = %g\n", t);
 
+	// RC Changed so that the view is zoomed in on the target region
+	// Can leave general view as well, but for debugging this is more informative
+
         // Set up bview box
-        view (width = 512, height = 512, fov = 30, ty = -0.5, \
+        view (width = 1024, height = 1024, fov = 5.0, ty = -0.1, \
             quat = {0, 0, -0.707, 0.707});
 
         /* Movie of the volume fraction of the droplet */
         clear();
         draw_vof("f", lw = 2);
-        squares("f", linear = true);
+        squares("f", linear = true, spread = -1, linear = true, map = cool_warm); // RC - minor changes here and beyond
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
-            squares("f", linear = true);
+            squares("f", linear = true, spread = -1, linear = true, map = cool_warm);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("tracer.mp4");
@@ -324,10 +327,10 @@ event movies (t += 0.005) {
         /* Movie of the vertical velocity */
         clear();
         draw_vof("f", lw = 2);
-        squares("u.x", linear = false);
+        squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
-            squares("u.x", linear = false);
+            squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("vertical_vel.mp4");
@@ -336,10 +339,10 @@ event movies (t += 0.005) {
         /* Movie of the horizontal velocity */
         clear();
         draw_vof("f", lw = 2);
-        squares("u.y", linear = false);
+        squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
-            squares("u.y", linear = false);
+            squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("horizontal_vel.mp4");
@@ -347,10 +350,10 @@ event movies (t += 0.005) {
         /* Movie of the pressure */
         clear();
         draw_vof("f", lw = 2);
-        squares("p", linear = false);
+        squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
         mirror ({0,1}) {
             draw_vof("f", lw = 2);
-            squares("p", linear = false);
+            squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("pressure.mp4");
@@ -407,11 +410,11 @@ event small_droplet_removal (i++) {
 
     /* Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
     removed */
-    int drop_min_cell_width = 4;
+    int drop_min_cell_width = 16;
 
     /* Region to ignore */
-    double ignore_region_x_limit = 0.01;
-    double ignore_region_y_limit = 2.0 * 0.05;
+    double ignore_region_x_limit = 0.02;
+    double ignore_region_y_limit = 0.02;
     
     /* Counts the number of bubbles there are */
     scalar bubbles[];
@@ -427,8 +430,7 @@ event small_droplet_removal (i++) {
         if (bubble_no > 1) {
             pinch_off_time = t;
         }
-    // } else if (t >= pinch_off_time + REMOVAL_DELAY) {
-    } else if (t >= pinch_off_time + 0.01) {
+    } else if (t >= pinch_off_time + REMOVAL_DELAY) {
         /* If we are a certain time after the pinch-off time, remove drops and 
         bubbles below the specified minimum size */
 
@@ -439,19 +441,20 @@ event small_droplet_removal (i++) {
         remove_struct.bubbles = false;
 
         // Remove droplets
-        remove_droplets(remove_struct);
+        remove_droplets_region(remove_struct, ignore_region_x_limit, ignore_region_y_limit);
 
         // Remove bubbles
         remove_struct.bubbles = true;
-        remove_droplets(remove_struct);
-
-        // Remove any bubbles left in the ignore region
-        foreach() {
-            if (x < ignore_region_x_limit && y < ignore_region_y_limit) {
-                f[] = 1.;
-            }
-        }
+        remove_droplets_region(remove_struct, ignore_region_x_limit, ignore_region_y_limit);
     }
+
+        // // Remove any bubbles left in the ignore region
+        // foreach() {
+        //     if (x < ignore_region_x_limit && y < ignore_region_y_limit) {
+        //         f[] = 1.;
+        //     }
+        // }
+
 
 }
 
