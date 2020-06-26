@@ -40,8 +40,8 @@ double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
 
 /* Force interpolation */
-double forces_array[2]; // Forces of the previous timesteps
-double times_array[2]; // Times of the previous timesteps
+double * forces_array; // Forces of the previous timesteps
+double * times_array; // Times of the previous timesteps
 double current_force; // Current force on plate
 double force_term; // Force term used in the ODE 
 
@@ -102,6 +102,12 @@ int main() {
     point reaches the radius of the droplet */
     double wagner_max_time = 2.0 * (IMPACT_TIME + 1. / 3.);
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
+
+    /* Allocates memory for the force and times arrays */
+    if (INTERPOLATE) {
+        forces_array = malloc(INTERP_NO * sizeof(double));
+        times_array = malloc(INTERP_NO * sizeof(double));
+    }
 
     /* Initialises interface time file */
     FILE* interface_time_file = fopen(interface_time_filename, "w");
@@ -198,63 +204,78 @@ event moving_plate (i++) {
     to calculate an approximation for this timestep */
     
     if (INTERPOLATE) {
-        if (i < 2) {
-            /* For at least the first two timesteps, we need to simply record the values
-            of the force and the timesteps. We set the force term to be zero */ 
+        // If the interpolate parameter is specified
+        if (INTERP_NO != 2) {
+            // Current version only works for INTERP_NO = 2
+            fprintf(stderr, "INTERP_NO must equal 2\n");
+            exit(1);
+        }
+
+        if (i < INTERP_NO) {
+            /* For the first INTERP_NO timesteps, we populate the force and 
+            times arrays with the current force and time values. The forcing 
+            term is set to be equal to the current force */ 
+
+            // Populate arrays
             forces_array[i] = current_force;
             times_array[i] = t;
 
+            // Specify forcing term for ODE
             force_term = current_force;
-        } else if (t < INTERP_DELAY)  {
-            /* We update the forces and the times arrays, but do no interpolation*/
-            forces_array[0] = forces_array[1];
-            forces_array[1] = current_force;
 
-            times_array[0] = times_array[1];
-            times_array[1] = t;
-
-            force_term = current_force;
         } else {
-            /* We check if the current force has increased or decreased from the 
-            previous force by the amount specified by the threshold. If it has, we 
-            instead use the interpolation of the last two forces as the force 
-            term */
-            double previous_force = forces_array[1];
-
-            if (current_force > previous_force - INTERP_FORCE_THRESHOLD \
-                && current_force < previous_force + INTERP_FORCE_THRESHOLD){
-
+            // Else, all the values of the force and times array are populated
+            if (t < INTERP_DELAY)  {
+                /* Beforen t == INTERP_DELAY, no interpolation is done and the 
+                force term in the ODE is taken to be the current force  */
                 force_term = current_force;
             } else {
-                /* The force has deviated largely from the last timestep, so we 
-                instead take the force term in the ODE to be a linear interpolation
-                of the force from the last two timesteps */
+                /* We make a prediction for the force at the current timestep
+                using the last INTERP_NO timesteps. If the difference between
+                the current force and this prediction is greater than the
+                threshold, then we take the forcing term in the ODE to be equal
+                to the prediction instead */
 
-                // Gradient of line
+
+                // ONLY WORKS FOR INTERP_NO = 2
+                // Calculate predicted value of the force
                 double gradient = (forces_array[1] - forces_array[0]) \
-                    / (times_array[1] - times_array[0]);
-
-                // Set the new force term as the interpolate
-                force_term = forces_array[1] + gradient * (t - times_array[1]) ;
-
+                        / (times_array[1] - times_array[0]);
+                double f_predict \
+                    = forces_array[1] + gradient * (t -  times_array[1]);
                 
+                // Check difference between current force and predicted value
+                if ((current_force < f_predict + INTERP_THRESHOLD) \
+                    && (current_force > f_predict - INTERP_THRESHOLD)) {
+                    // If the force is within the set threshold of the
+                    // prediction
+                    force_term = current_force;
+                } else {
+                    // Else the force is outside the range
+                    force_term = f_predict;
 
-                // Output stats on interpolation
-                FILE *interp_stats_file = fopen(interp_stats_filename, "a");
-                fprintf(interp_stats_file, "t = %g, F = %g, F0 = %g, t0 = %g, F1 = %g, t1 = %g, F_int = %g\n", \
-                t, current_force, forces_array[0], times_array[0], forces_array[1], times_array[1], force_term);
-                fprintf(interp_stats_file, "lower_thresh = %g, upper_thresh = %g\n",\
-                (1. - INTERP_FORCE_THRESHOLD) * previous_force, (1. + INTERP_FORCE_THRESHOLD) * previous_force);
-                fprintf(interp_stats_file, "\n");
-                fclose(interp_stats_file);
+                    // Output stats on interpolation
+                    FILE *interp_stats_file = fopen(interp_stats_filename, "a");
+                    fprintf(interp_stats_file, \
+                        "t = %g, F = %g, F0 = %g, t0 = %g, F1 = %g, t1 = %g, F_int = %g\n", \
+                        t, current_force, forces_array[0], times_array[0], \
+                        forces_array[1], times_array[1], force_term);
+                    fprintf(interp_stats_file, "lower_thresh = %g, upper_thresh = %g\n",\
+                    f_predict - INTERP_THRESHOLD, f_predict + INTERP_THRESHOLD);
+                    fprintf(interp_stats_file, "\n");
+                    fclose(interp_stats_file);
+                }
             }
 
-            forces_array[0] = forces_array[1];
-            forces_array[1] = force_term;
-
-            times_array[0] = times_array[1];
-            times_array[1] = t;
-
+            // Populate arrays
+            #pragma omp critical
+            for (int j = 0; j < INTERP_NO - 1; j++) {
+                forces_array[j] = forces_array[j + 1];
+                times_array[j] = times_array[j + 1];
+                
+            }
+            forces_array[INTERP_NO - 1] = force_term;
+            times_array[INTERP_NO - 1] = t;
         }
     } else {
         force_term = current_force;
