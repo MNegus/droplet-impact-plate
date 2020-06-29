@@ -2,7 +2,7 @@
 #include "axi.h" // Axisymmetric coordinates
 #include "navier-stokes/centered.h" // To solve the Navier-Stokes
 #include "two-phase.h" // Implements two-phase flow
-#include <omp.h> // For openMP parallel
+// #include <omp.h> // For openMP parallel
 #include <gsl/gsl_fit.h>
 
 
@@ -16,6 +16,8 @@ int main () {
 
     forces_array = malloc(INTERP_NO * sizeof(double));
     times_array = malloc(INTERP_NO * sizeof(double));
+
+    DT = 1e-2;
 
     run();
 
@@ -39,14 +41,16 @@ event force(i++) {
         fprintf(stderr, "f = %g, f_interp = %g", current_force, interp_force);
         fprintf(stderr, "\n");
 
-        #pragma omp critical
+        // #pragma omp critical
         for (int j = 0; j < INTERP_NO - 1; j++) {
-            forces_array[i] = forces_array[i + 1];
+            forces_array[j] = forces_array[j + 1];
+            times_array[j] = times_array[j + 1];
         }
         forces_array[INTERP_NO - 1] = current_force;
+        times_array[INTERP_NO - 1] = t;
     }
 }
 
-event end(i = 20) {
+event end(t = 1) {
     fprintf(stderr, "Ended\n");
 }
