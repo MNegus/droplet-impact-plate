@@ -40,11 +40,12 @@ char interface_time_filename[80] = "interface_times.txt";
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
 
-/* Force interpolation */
-double * forces_array; // Forces of the previous timesteps
-double * times_array; // Times of the previous timesteps
+/* Force peak detection */
+double * filtered_forces; // Filtered forces of previous timesteps
 double current_force; // Current force on plate
 double force_term; // Force term used in the ODE 
+double avgFilter; // Average of force over the last PEAK_LAG timesteps
+double stdFilter; // Standard deviation of force over last PEAK_LAG timesteps
 
 /* Plate position variables */
 double s_previous = 0.; // Value of s at previous timestep
@@ -105,9 +106,8 @@ int main() {
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
 
     /* Allocates memory for the force and times arrays */
-    if (INTERPOLATE) {
-        forces_array = malloc(INTERP_NO * sizeof(double));
-        times_array = malloc(INTERP_NO * sizeof(double));
+    if (PEAK_DETECT) {
+        filtered_forces = malloc(PEAK_DETECT * sizeof(double));
     }
 
     /* Initialises interface time file */
@@ -135,9 +135,8 @@ int main() {
 
     fclose(fp_stats); // RC
 
-    if (INTERPOLATE) {
-        free(forces_array);
-        free(times_array);
+    if (PEAK_DETECT) {
+        free(filtered_forces);
     }
 }
 
@@ -200,126 +199,79 @@ event moving_plate (i++) {
 
     current_force = 2 * pi * current_force; // Integrates about the angular part
 
-    /* Force interpolation. If the current value of force has deviated from the
-    previous value by too much, then we instead interpolate the last two values
-    to calculate an approximation for this timestep */
+    /* Peak detection. We attempt to use a peak detection algorithm to check if 
+    the current force value is as expected, or if it has peaked to a 
+    non-desirable value. */
     
-    if (INTERPOLATE) {
-        // If the interpolate parameter is specified
+    // If the peak detect parameter is satisfied
+    if (PEAK_DETECT) {
+        
+        /* For the first PEAK_LAG timesteps, we populate the filtered force
+            array with the current values of the force. The forcing term is set
+            to the current force */ 
+        if (i < PEAK_LAG) {
 
-        if (i < INTERP_NO) {
-            /* For the first INTERP_NO timesteps, we populate the force and 
-            times arrays with the current force and time values. The forcing 
-            term is set to be equal to the current force */ 
-
-            // Populate arrays
-            forces_array[i] = current_force;
-            times_array[i] = t;
+            // Populate array
+            filtered_forces[i] = current_force;
 
             // Specify forcing term for ODE
             force_term = current_force;
 
         } else {
-            // Else, all the values of the force and times array are populated
-            if (t < INTERP_DELAY)  {
-                /* Beforen t == INTERP_DELAY, no interpolation is done and the 
-                force term in the ODE is taken to be the current force  */
+            /* Before the specified delay, no peak detection happens. This is to
+            ensure the problem has regularised */
+            if (t < PEAK_DELAY)  {
                 force_term = current_force;
+            /* Else, we initiate the peak detection algorithm */
             } else {
-                /* We check the time derivative of the force to see if its 
-                absolute value is more than the value F_DERIV_MAX. If so, then 
-                we use interpolation on the last INTERP_NO steps to find a 
-                correction value to take for the force */
+                if (fabs(current_force - avgFilter) > PEAK_THRESHOLD * stdFilter) {
+                    force_term = PEAK_INFLUENCE * current_force \
+                        + (1 - PEAK_INFLUENCE) * filtered_forces[PEAK_LAG - 1];
 
-                // Calculation of force time derivative
-                double previous_force = forces_array[INTERP_NO - 1];
-                double previous_time = times_array[INTERP_NO - 1];
-                double dF_dt \
-                    = (current_force - previous_force) / (t - previous_time);
-
-                if (fabs(dF_dt) < F_DERIV_MAX) {
-                    force_term = current_force;
-                } else {
-                    // Calculate predicted value of the force using gsl fit
-                    double intercept, gradient, cov00, cov01, cov11, sumsq;
-                    gsl_fit_linear(times_array, 1, forces_array, 1, INTERP_NO, \
-                        &intercept, &gradient, &cov00, &cov01, &cov11, &sumsq);
-                    force_term = gradient * t + intercept;
-
-                    // Output stats on interpolation
-                    FILE *interp_stats_file = fopen(interp_stats_filename, "a");
-                    fprintf(interp_stats_file, \
-                        "t = %g, F = %g, F_int = %g, dF_dt = %g\n", \
-                        t, current_force, force_term, dF_dt);
-                    #pragma omp critical
-                    for (int j = 0; j < INTERP_NO; j++) {
-                        fprintf(interp_stats_file, "F_%d = %g, ", \
-                            j,  forces_array[j]); 
-                    }
-                    fprintf(interp_stats_file, "\n");
+                    FILE * interp_stats_file = fopen(interp_stats_filename, "a");
+                    fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, force_term = %g\n", \
+                        t, current_force, avgFilter, force_term);
                     fclose(interp_stats_file);
+                } else {
+                    force_term = current_force;
                 }
-
-                // /* We make a prediction for the force at the current timestep
-                // using the last INTERP_NO timesteps. If the difference between
-                // the current force and this prediction is greater than the
-                // threshold, then we take the forcing term in the ODE to be equal
-                // to the prediction instead */
-
-                // // Calculate predicted value of the force using gsl fit
-                // double intercept, gradient, cov00, cov01, cov11, sumsq;
-                // gsl_fit_linear(times_array, 1, forces_array, 1, INTERP_NO, \
-                //     &intercept, &gradient, &cov00, &cov01, &cov11, &sumsq);
-                // double f_predict = gradient * t + intercept;
-                
-                // // Upper and lower threshold of accepted value for force
-                // double upper_thresh = MULTIPLICATIVE_THRESHOLD * f_predict;
-                // double lower_thresh = f_predict / MULTIPLICATIVE_THRESHOLD;
-
-                // if ((current_force < upper_thresh) \
-                //     && (current_force > lower_thresh)) {
-                //     // If the force is within the set threshold of the
-                //     // prediction
-                //     force_term = current_force;
-                // } else if (f_predict <= 0) {
-                //     force_term = current_force;
-                // } else {
-                //     // Else the force is outside the range, and we set the force
-                //     // term to be equal to the predicted value
-                //     force_term = f_predict;
-
-                //     // Output stats on interpolation
-                //     FILE *interp_stats_file = fopen(interp_stats_filename, "a");
-                //     fprintf(interp_stats_file, \
-                //         "t = %g, F = %g, F_int = %g, lower_thresh = %g, upper_thresh = %g\n", \
-                //         t, current_force, force_term, lower_thresh, upper_thresh);
-                //     #pragma omp critical
-                //     for (int j = 0; j < INTERP_NO; j++) {
-                //         fprintf(interp_stats_file, "F_%d = %g, ", \
-                //             j,  forces_array[j]); 
-                //     }
-                    
-                //     fprintf(interp_stats_file, "\n");
-                //     fclose(interp_stats_file);
-                // }
             }
 
-            // Populate arrays
+            // Re-populate filtered forces array
             #pragma omp critical
-            for (int j = 0; j < INTERP_NO - 1; j++) {
-                forces_array[j] = forces_array[j + 1];
-                times_array[j] = times_array[j + 1];
-                
+            for (int j = 0; j < PEAK_LAG - 1; j++) {
+                filtered_forces[j] = filtered_forces[j + 1];
+                // fprintf(stderr, "f[%d] = %g, ", j, filtered_forces[j]);
             }
-            forces_array[INTERP_NO - 1] = force_term;
-            times_array[INTERP_NO - 1] = t;
+            // fprintf(stderr, "\n");
+            filtered_forces[PEAK_LAG - 1] = force_term;
+        }
+
+        // Update average and standard deviation of filtered forces
+        if (i >= PEAK_LAG - 1) {
+            // Average
+            avgFilter = 0;
+            #pragma omp parallel for reduction(+:avgFilter)
+            for (int j = 0; j < PEAK_LAG; j++) {
+                avgFilter += filtered_forces[j];
+            }
+            avgFilter = avgFilter / PEAK_LAG;
+
+            // Standard deviation
+            stdFilter = 0;
+            #pragma omp parallel for reduction(+:stdFilter)
+            for (int j = 0; j < PEAK_LAG; j++) {
+                stdFilter += (filtered_forces[j] - avgFilter) \
+                    * (filtered_forces[j] - avgFilter);
+            }
+            stdFilter = sqrt(stdFilter / PEAK_LAG);
         }
     } else {
-        // Without interpolate, we set the force term to the current force
+        // Without peak detect, we set the force term to the current force
         force_term = current_force;
     }
 
-
+    // If before force delay time, we set the force term to be zero
     if (t < FORCE_DELAY_TIME) force_term = 0;
 
     /* Solves the ODE for the updated plate position and acceleration */
@@ -450,20 +402,10 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         fclose(plate_output_file);
         plate_output_no++; // Increments output number
 
-        // /* Counts the number of droplets and bubbles there are */
-        // scalar drop_field[];
-        // scalar bubble_field[];
-        // foreach() {
-        //     drop_field[] = f[] > drop_thresh;
-        //     bubble_field[] = 1. - f[] > drop_thresh;
-        // }
-        // int curr_drop_no = tag(drop_field);
-        // int curr_bubble_no = tag(bubble_field);
-
         /* Outputs data to log file */
         fprintf(stderr, \
-            "t = %.8f, v = %.8f, F = %.8f, force_term = %.8f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
-            t, 2 * pi * statsf(f).sum, current_force, force_term, s_current, ds_dt, d2s_dt2);
+            "t = %.4f, F = %.6f, force_term = %.6f, avg = %.6f, std = %.6f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
+            t, current_force, force_term, avgFilter, stdFilter, s_current, ds_dt, d2s_dt2);
     }
 }
 
