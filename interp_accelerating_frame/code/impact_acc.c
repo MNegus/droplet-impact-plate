@@ -16,6 +16,7 @@
 #include "tension.h" // Surface tension of droplet
 #include "tag.h" // For removing small droplets
 #include <omp.h> // For openMP parallel
+#include <gsl/gsl_fit.h> // For linear interpolating
 
 #include "contact.h" // RC for imposing contact angle on surface
 
@@ -133,6 +134,11 @@ int main() {
     run();
 
     fclose(fp_stats); // RC
+
+    if (INTERPOLATE) {
+        free(forces_array);
+        free(times_array);
+    }
 }
 
 
@@ -168,11 +174,6 @@ event refinement (i++) {
     /* Refines above the plate */
     refine((y < PLATE_WIDTH) && (x <= PLATE_REFINED_WIDTH) \
         && level < MAXLEVEL);
-
-    /* Refines box around the origin for entrapped bubble */
-    // RC this one shouldn't be needed if all else goes well
-    // refine((y < 0.05 * DROP_RADIUS) && (x < 0.05 * DROP_RADIUS) \
-    //    && level < MAXLEVEL);
 }
 
 
@@ -205,11 +206,6 @@ event moving_plate (i++) {
     
     if (INTERPOLATE) {
         // If the interpolate parameter is specified
-        if (INTERP_NO != 2) {
-            // Current version only works for INTERP_NO = 2
-            fprintf(stderr, "INTERP_NO must equal 2\n");
-            exit(1);
-        }
 
         if (i < INTERP_NO) {
             /* For the first INTERP_NO timesteps, we populate the force and 
@@ -230,41 +226,82 @@ event moving_plate (i++) {
                 force term in the ODE is taken to be the current force  */
                 force_term = current_force;
             } else {
-                /* We make a prediction for the force at the current timestep
-                using the last INTERP_NO timesteps. If the difference between
-                the current force and this prediction is greater than the
-                threshold, then we take the forcing term in the ODE to be equal
-                to the prediction instead */
+                /* We check the time derivative of the force to see if its 
+                absolute value is more than the value F_DERIV_MAX. If so, then 
+                we use interpolation on the last INTERP_NO steps to find a 
+                correction value to take for the force */
 
+                // Calculation of force time derivative
+                double previous_force = forces_array[INTERP_NO - 1];
+                double previous_time = times_array[INTERP_NO - 1];
+                double dF_dt \
+                    = (current_force - previous_force) / (t - previous_time);
 
-                // ONLY WORKS FOR INTERP_NO = 2
-                // Calculate predicted value of the force
-                double gradient = (forces_array[1] - forces_array[0]) \
-                        / (times_array[1] - times_array[0]);
-                double f_predict \
-                    = forces_array[1] + gradient * (t -  times_array[1]);
-                
-                // Check difference between current force and predicted value
-                if ((current_force < f_predict + INTERP_THRESHOLD) \
-                    && (current_force > f_predict - INTERP_THRESHOLD)) {
-                    // If the force is within the set threshold of the
-                    // prediction
+                if (fabs(dF_dt) < F_DERIV_MAX) {
                     force_term = current_force;
                 } else {
-                    // Else the force is outside the range
-                    force_term = f_predict;
+                    // Calculate predicted value of the force using gsl fit
+                    double intercept, gradient, cov00, cov01, cov11, sumsq;
+                    gsl_fit_linear(times_array, 1, forces_array, 1, INTERP_NO, \
+                        &intercept, &gradient, &cov00, &cov01, &cov11, &sumsq);
+                    force_term = gradient * t + intercept;
 
                     // Output stats on interpolation
                     FILE *interp_stats_file = fopen(interp_stats_filename, "a");
                     fprintf(interp_stats_file, \
-                        "t = %g, F = %g, F0 = %g, t0 = %g, F1 = %g, t1 = %g, F_int = %g\n", \
-                        t, current_force, forces_array[0], times_array[0], \
-                        forces_array[1], times_array[1], force_term);
-                    fprintf(interp_stats_file, "lower_thresh = %g, upper_thresh = %g\n",\
-                    f_predict - INTERP_THRESHOLD, f_predict + INTERP_THRESHOLD);
+                        "t = %g, F = %g, F_int = %g, dF_dt = %g\n", \
+                        t, current_force, force_term, dF_dt);
+                    #pragma omp critical
+                    for (int j = 0; j < INTERP_NO; j++) {
+                        fprintf(interp_stats_file, "F_%d = %g, ", \
+                            j,  forces_array[j]); 
+                    }
                     fprintf(interp_stats_file, "\n");
                     fclose(interp_stats_file);
                 }
+
+                // /* We make a prediction for the force at the current timestep
+                // using the last INTERP_NO timesteps. If the difference between
+                // the current force and this prediction is greater than the
+                // threshold, then we take the forcing term in the ODE to be equal
+                // to the prediction instead */
+
+                // // Calculate predicted value of the force using gsl fit
+                // double intercept, gradient, cov00, cov01, cov11, sumsq;
+                // gsl_fit_linear(times_array, 1, forces_array, 1, INTERP_NO, \
+                //     &intercept, &gradient, &cov00, &cov01, &cov11, &sumsq);
+                // double f_predict = gradient * t + intercept;
+                
+                // // Upper and lower threshold of accepted value for force
+                // double upper_thresh = MULTIPLICATIVE_THRESHOLD * f_predict;
+                // double lower_thresh = f_predict / MULTIPLICATIVE_THRESHOLD;
+
+                // if ((current_force < upper_thresh) \
+                //     && (current_force > lower_thresh)) {
+                //     // If the force is within the set threshold of the
+                //     // prediction
+                //     force_term = current_force;
+                // } else if (f_predict <= 0) {
+                //     force_term = current_force;
+                // } else {
+                //     // Else the force is outside the range, and we set the force
+                //     // term to be equal to the predicted value
+                //     force_term = f_predict;
+
+                //     // Output stats on interpolation
+                //     FILE *interp_stats_file = fopen(interp_stats_filename, "a");
+                //     fprintf(interp_stats_file, \
+                //         "t = %g, F = %g, F_int = %g, lower_thresh = %g, upper_thresh = %g\n", \
+                //         t, current_force, force_term, lower_thresh, upper_thresh);
+                //     #pragma omp critical
+                //     for (int j = 0; j < INTERP_NO; j++) {
+                //         fprintf(interp_stats_file, "F_%d = %g, ", \
+                //             j,  forces_array[j]); 
+                //     }
+                    
+                //     fprintf(interp_stats_file, "\n");
+                //     fclose(interp_stats_file);
+                // }
             }
 
             // Populate arrays
@@ -278,6 +315,7 @@ event moving_plate (i++) {
             times_array[INTERP_NO - 1] = t;
         }
     } else {
+        // Without interpolate, we set the force term to the current force
         force_term = current_force;
     }
 

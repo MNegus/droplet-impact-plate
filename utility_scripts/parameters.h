@@ -51,4 +51,5 @@ const int REMOVE_ENTRAPMENT = 1; // If 1, completely remove entrapped air
 const int INTERPOLATE = 1; // If 1, interpolate the force when appropriate
 const int INTERP_NO = 2; // Number of timesteps backwards to interpolate by
 const double INTERP_THRESHOLD = 0.1; // Fractional difference to interpolate
+const double F_DERIV_MAX = 100;
 const double INTERP_DELAY = 0.05; // Delay to when interpolation starts
