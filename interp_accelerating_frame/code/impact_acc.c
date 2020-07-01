@@ -46,6 +46,9 @@ double current_force; // Current force on plate
 double force_term; // Force term used in the ODE 
 double avgFilter; // Average of force over the last PEAK_LAG timesteps
 double stdFilter; // Standard deviation of force over last PEAK_LAG timesteps
+int peak_no = 0; // Number of times we have done peak detection
+double previous_avg = 0;
+double previous_std = 0;
 
 /* Plate position variables */
 double s_previous = 0.; // Value of s at previous timestep
@@ -176,7 +179,7 @@ event refinement (i++) {
 }
 
 
-event moving_plate (i++) {
+event moving_plate (t += DT) {
 /* Moves the plate as a function of the force on it */
 
     /* Calculate the force on the plate by integrating using trapeze rule*/
@@ -205,11 +208,11 @@ event moving_plate (i++) {
     
     // If the peak detect parameter is satisfied
     if (PEAK_DETECT) {
-        
+
         /* For the first PEAK_LAG timesteps, we populate the filtered force
             array with the current values of the force. The forcing term is set
             to the current force */ 
-        if (i < PEAK_LAG) {
+        if (peak_no < PEAK_LAG) {
 
             // Populate array
             filtered_forces[i] = current_force;
@@ -217,23 +220,46 @@ event moving_plate (i++) {
             // Specify forcing term for ODE
             force_term = current_force;
 
+            peak_no++;
+
         } else {
+            double new_filtered; // New filtered value of force
+
             /* Before the specified delay, no peak detection happens. This is to
             ensure the problem has regularised */
             if (t < PEAK_DELAY)  {
                 force_term = current_force;
             /* Else, we initiate the peak detection algorithm */
             } else {
-                if (fabs(current_force - avgFilter) > PEAK_THRESHOLD * stdFilter) {
-                    force_term = PEAK_INFLUENCE * current_force \
+                if (current_force <= 0) {
+                    // If force is less than or equal to zero, completely ignore
+                    force_term = filtered_forces[PEAK_LAG - 1];
+                    new_filtered = force_term;
+
+                    FILE * interp_stats_file = fopen(interp_stats_filename, "a");
+                    fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
+                        t, current_force, avgFilter, stdFilter, force_term);
+                    fclose(interp_stats_file);
+                } else if (fabs(current_force - avgFilter) > PEAK_THRESHOLD * stdFilter) {
+                    /* If current force deviates from the mean more than 
+                    PEAK_THRESHOLD number of standard deviations, then take 
+                    force term to be an influenced value */
+                    if (current_force > avgFilter) {
+                        force_term = avgFilter + PEAK_THRESHOLD * stdFilter;
+                    } else {
+                        force_term = avgFilter - PEAK_THRESHOLD * stdFilter;
+                    }
+                     
+                    new_filtered = PEAK_INFLUENCE * current_force \
                         + (1 - PEAK_INFLUENCE) * filtered_forces[PEAK_LAG - 1];
 
                     FILE * interp_stats_file = fopen(interp_stats_filename, "a");
-                    fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, force_term = %g\n", \
-                        t, current_force, avgFilter, force_term);
+                    fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
+                        t, current_force, avgFilter, stdFilter, force_term);
                     fclose(interp_stats_file);
                 } else {
                     force_term = current_force;
+                    new_filtered = force_term;
                 }
             }
 
@@ -241,31 +267,36 @@ event moving_plate (i++) {
             #pragma omp critical
             for (int j = 0; j < PEAK_LAG - 1; j++) {
                 filtered_forces[j] = filtered_forces[j + 1];
-                // fprintf(stderr, "f[%d] = %g, ", j, filtered_forces[j]);
             }
-            // fprintf(stderr, "\n");
-            filtered_forces[PEAK_LAG - 1] = force_term;
+            filtered_forces[PEAK_LAG - 1] = new_filtered;
         }
 
         // Update average and standard deviation of filtered forces
-        if (i >= PEAK_LAG - 1) {
+        if (peak_no >= PEAK_LAG - 1) {
+            previous_avg = avgFilter;
+            previous_std = stdFilter;
+
             // Average
+            // fprintf(stderr, "t = %.4f, ", t);
             avgFilter = 0;
-            #pragma omp parallel for reduction(+:avgFilter)
+            #pragma omp for reduction(+:avgFilter)
             for (int j = 0; j < PEAK_LAG; j++) {
-                avgFilter += filtered_forces[j];
+                // fprintf(stderr, "f[%d] = %g, ", j, filtered_forces[j]);
+                avgFilter = avgFilter + filtered_forces[j];
             }
-            avgFilter = avgFilter / PEAK_LAG;
+            avgFilter = avgFilter / ((double) PEAK_LAG);
+            // fprintf(stderr, "avg = %g\n", avgFilter);
 
             // Standard deviation
             stdFilter = 0;
-            #pragma omp parallel for reduction(+:stdFilter)
+            #pragma omp for reduction(+:stdFilter)
             for (int j = 0; j < PEAK_LAG; j++) {
                 stdFilter += (filtered_forces[j] - avgFilter) \
                     * (filtered_forces[j] - avgFilter);
             }
-            stdFilter = sqrt(stdFilter / PEAK_LAG);
+            stdFilter = sqrt(stdFilter / ((double) PEAK_LAG));
         }
+        
     } else {
         // Without peak detect, we set the force term to the current force
         force_term = current_force;
@@ -275,14 +306,14 @@ event moving_plate (i++) {
     if (t < FORCE_DELAY_TIME) force_term = 0;
 
     /* Solves the ODE for the updated plate position and acceleration */
-    s_next = (dt * dt * force_term \
-        + (2. * ALPHA - dt * dt * GAMMA) * s_current \
-        - (ALPHA - dt * BETA / 2.) * s_previous) \
-        / (ALPHA + dt * BETA / 2.);
+    s_next = (DT * DT * force_term \
+        + (2. * ALPHA - DT * DT * GAMMA) * s_current \
+        - (ALPHA - DT * BETA / 2.) * s_previous) \
+        / (ALPHA + DT * BETA / 2.);
 
     /* Updates values of s and its derivatives */
-    ds_dt = (s_next - s_previous) / (2. * dt);
-    d2s_dt2 = (s_next - 2 * s_current + s_previous) / (dt * dt);
+    ds_dt = (s_next - s_previous) / (2. * DT);
+    d2s_dt2 = (s_next - 2 * s_current + s_previous) / (DT * DT);
     s_previous = s_current;
     s_current = s_next; 
 
@@ -405,7 +436,7 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         /* Outputs data to log file */
         fprintf(stderr, \
             "t = %.4f, F = %.6f, force_term = %.6f, avg = %.6f, std = %.6f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
-            t, current_force, force_term, avgFilter, stdFilter, s_current, ds_dt, d2s_dt2);
+            t, current_force, force_term, previous_avg, previous_std, s_current, ds_dt, d2s_dt2);
     }
 }
 
