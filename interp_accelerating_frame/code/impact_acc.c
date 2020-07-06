@@ -4,8 +4,10 @@
     plate, so an additional body force is added.
 */
 
-// RC This is commonly used for large viscosity contrasts
+// Filtering for large viscosity ratios
 #define FILTERED
+
+// Definition of viscosity for a value of f
 #define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
 
 #include "parameters.h" // Includes all defined parameters
@@ -15,11 +17,9 @@
 #include "view.h" // Creating movies using bview
 #include "tension.h" // Surface tension of droplet
 #include "tag.h" // For removing small droplets
+#include "contact.h" // For imposing contact angle on the surface
 #include <omp.h> // For openMP parallel
 #include <gsl/gsl_fit.h> // For linear interpolating
-
-#include "contact.h" // RC for imposing contact angle on surface
-
 
 /* Computational constants derived from parameters */
 double MIN_CELL_SIZE; // Size of the smallest cell
@@ -35,10 +35,10 @@ double end_wall_time; // Time the simulation finished
 int gfs_output_no = 1; // Records how many GFS files have been outputted
 int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
-// Stores time the interface was outputted
-char interface_time_filename[80] = "interface_times.txt"; 
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
+// Stores time the interface was outputted
+char interface_time_filename[80] = "interface_times.txt"; 
 
 /* Force peak detection */
 double * filtered_forces; // Filtered forces of previous timesteps
@@ -47,8 +47,8 @@ double force_term; // Force term used in the ODE
 double avgFilter; // Average of force over the last PEAK_LAG timesteps
 double stdFilter; // Standard deviation of force over last PEAK_LAG timesteps
 int peak_no = 0; // Number of times we have done peak detection
-double previous_avg = 0;
-double previous_std = 0;
+double previous_avg = 0; // Value of avgFilter in previous timestep
+double previous_std = 0; // Value of stdFilter in previous timestep
 
 /* Plate position variables */
 double s_previous = 0.; // Value of s at previous timestep
@@ -57,11 +57,13 @@ double s_next; // Values of s at next timestep
 double ds_dt; // First time derivative of s
 double d2s_dt2; // Second time derivative of s
 
-FILE * fp_stats; // RC
+/* Stats output */
+FILE * fp_stats; 
 char interp_stats_filename[80] = "interp_stats.txt";
 
-vector h[];  // RC
-double theta0 = 90;  // RC
+/* Contact angle variables */ 
+vector h[];  // Height function
+double theta0 = 90;  // Contact angle in degrees
 
 /* Boundary conditions */
 // Conditions for entry from above
@@ -78,6 +80,7 @@ u.n[left] = dirichlet(0.); // No flow through surface
 u.t[left] = dirichlet(0.); // No slip at surface
 h.t[left] = contact_angle (theta0*pi/180.); // RC contact angle
 
+// Function for removing droplets away from a specific region
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit);
         
@@ -121,26 +124,22 @@ int main() {
     FILE * interp_stats_file = fopen(interp_stats_filename, "w");
     fclose(interp_stats_file);
 
-    // RC
-    {
-      char name[200];
-      sprintf(name, "logstats.dat");
-      fp_stats = fopen(name, "w");
-    }
+    /* Open stats file */
+    char name[200];
+    sprintf(name, "logstats.dat");
+    fp_stats = fopen(name, "w");
 
-    // RC these give the solver a helping hand (at some extra cost)
-    DT = 1.0e-4;
-    NITERMIN = 1; // default 1
-    NITERMAX = 400; // default 100
-    TOLERANCE = 1e-5; // default 1e-3
+    /* Poisson solver constants */
+    DT = 1.0e-4; // Minimum timestep
+    NITERMIN = 1; // Min number of iterations (default 1)
+    NITERMAX = 300; // Max number of iterations (default 100)
+    TOLERANCE = 1e-5; // Possion solver tolerance (default 1e-3)
 
+    // Run the simulation
     run();
 
-    fclose(fp_stats); // RC
-
-    if (PEAK_DETECT) {
-        free(filtered_forces);
-    }
+    // Close stats file
+    fclose(fp_stats);
 }
 
 
@@ -170,7 +169,7 @@ event refinement (i++) {
 /* Refines the grid where appropriate */
 
     /* Adapts with respect to velocities and volume fraction */
-    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-6}, // RC changed the interfacial tolerance to something more stringent
+    adapt_wavelet ({u.x, u.y, f}, (double[]){1e-2, 1e-2, 1e-6}, 
         minlevel = MINLEVEL, maxlevel = MAXLEVEL);
     
     /* Refines above the plate */
@@ -179,7 +178,7 @@ event refinement (i++) {
 }
 
 
-event moving_plate (t += DT) {
+event moving_plate (t += 1e-4) {
 /* Moves the plate as a function of the force on it */
 
     /* Calculate the force on the plate by integrating using trapeze rule*/
@@ -350,17 +349,17 @@ event acceleration (i++) {
 }
 
 
-event small_droplet_removal (i += 5) { // RC doing this every n iterations or every 1e-3/4 in time is rather important (to avoid choking the run)
-// Removes any small droplets or bubbles that have formed, that are smaller than
-//    a specific size
+event small_droplet_removal (t += 1e-3) { 
+/* Removes any small droplets or bubbles that have formed, that are smaller than
+ a specific size */
 
     // Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
     // removed
     int drop_min_cell_width = 16;
 
     // Region to ignore
-    double ignore_region_x_limit = 0.02; //0.01;
-    double ignore_region_y_limit = 0.02; //2.2 * 0.05;
+    double ignore_region_x_limit = 0.02; 
+    double ignore_region_y_limit = 0.02; 
     
     // Counts the number of bubbles there are
     scalar bubbles[];
@@ -387,11 +386,13 @@ event small_droplet_removal (i += 5) { // RC doing this every n iterations or ev
         remove_struct.bubbles = false;
 
         // Remove droplets
-        remove_droplets_region(remove_struct, ignore_region_x_limit, ignore_region_y_limit);
+        remove_droplets_region(remove_struct, ignore_region_x_limit, \
+            ignore_region_y_limit);
 
         // Remove bubbles
         remove_struct.bubbles = true;
-        remove_droplets_region(remove_struct, ignore_region_x_limit, ignore_region_y_limit);
+        remove_droplets_region(remove_struct, ignore_region_x_limit, \
+            ignore_region_y_limit);
 
         // Completely removes bubble if specified
         if (REMOVE_ENTRAPMENT) {
@@ -476,18 +477,16 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 }
 
 
-event movies (t += 0.001) {
+event movies (t += 1e-3) {
 /* Produces movies using bview */ 
     if (MOVIES) {
         // Creates a string with the time to put on the plots
         char time_str[80];
         sprintf(time_str, "t = %g\n", t);
 
-	// RC Changed so that the view is zoomed in on the target region
-	// Can leave general view as well, but for debugging this is more informative
-
+        /* Zoomed out view */
         // Set up bview box
-        view (width = 1024, height = 1024, fov = 5.0, ty = -0.1, \
+        view (width = 1024, height = 1024, fov = 18.0, ty = -0.4, \
             quat = {0, 0, -0.707, 0.707});
 
         /* Movie of the volume fraction of the droplet */
@@ -534,6 +533,21 @@ event movies (t += 0.001) {
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("pressure.mp4");
+
+        /* Zoomed in view of pressure around entrapped bubble */
+        // Set up bview box
+        view (width = 1024, height = 1024, fov = 5.0, ty = -0.1, \
+            quat = {0, 0, -0.707, 0.707});
+
+        clear();
+        draw_vof("f", lw = 2);
+        squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
+        mirror ({0,1}) {
+            draw_vof("f", lw = 2);
+            squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
+        }
+        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+        save ("zoomed_pressure.mp4");
     }
 }
 
@@ -545,12 +559,15 @@ event end (t = MAX_TIME) {
 
     fprintf(stderr, "Finished after %g seconds\n", \
         end_wall_time - start_wall_time);
+
+    if (PEAK_DETECT) {
+        free(filtered_forces);
+    }
 }
 
 /* Alternative remove_droplets definitions */
 void remove_droplets_region(struct RemoveDroplets p,\
-        double ignore_region_x_limit, double ignore_region_y_limit) 
-{
+        double ignore_region_x_limit, double ignore_region_y_limit) {
     scalar d[], f = p.f;
     double threshold = p.threshold ? p.threshold : 1e-4;
     foreach()
@@ -582,7 +599,6 @@ void remove_droplets_region(struct RemoveDroplets p,\
     boundary ({f});
 }
 
-// RC
 
 event logstats (t += 0.01) {
 
