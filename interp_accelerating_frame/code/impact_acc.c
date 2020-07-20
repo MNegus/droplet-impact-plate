@@ -228,10 +228,17 @@ event moving_plate (t += 1e-4) {
             ensure the problem has regularised */
             if (t < PEAK_DELAY)  {
                 force_term = current_force;
+                new_filtered = force_term;
             /* Else, we initiate the peak detection algorithm */
             } else {
-                if (current_force <= 0) {
-                    // If force is less than or equal to zero, completely ignore
+                double previous_force = filtered_forces[PEAK_LAG - 1];
+                double diff_from_previous \
+                    = (current_force - previous_force) / previous_force;
+
+                if ((current_force <= 0) || fabs(diff_from_previous) > 0.25) {
+                    /* If current force is less than or equal to zero, or 
+                    differs from the previous force by more than 25%, then 
+                    completely ignore */
                     force_term = filtered_forces[PEAK_LAG - 1];
                     new_filtered = force_term;
 
@@ -243,11 +250,12 @@ event moving_plate (t += 1e-4) {
                     /* If current force deviates from the mean more than 
                     PEAK_THRESHOLD number of standard deviations, then take 
                     force term to be an influenced value */
-                    if (current_force > avgFilter) {
-                        force_term = avgFilter + PEAK_THRESHOLD * stdFilter;
-                    } else {
-                        force_term = avgFilter - PEAK_THRESHOLD * stdFilter;
-                    }
+                    // if (current_force > avgFilter) {
+                    //     force_term = avgFilter + PEAK_THRESHOLD * stdFilter;
+                    // } else {
+                    //     force_term = avgFilter - PEAK_THRESHOLD * stdFilter;
+                    // }
+                    force_term = avgFilter;
                      
                     new_filtered = PEAK_INFLUENCE * current_force \
                         + (1 - PEAK_INFLUENCE) * filtered_forces[PEAK_LAG - 1];
