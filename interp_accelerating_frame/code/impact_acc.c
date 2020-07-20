@@ -413,8 +413,8 @@ event small_droplet_removal (t += 1e-3) {
     }
 }
 
-event output_data (t += PLATE_OUTPUT_TIMESTEP) {
-/* Outputs data about the flow*/
+event output_plate (t += PLATE_OUTPUT_TIMESTEP) {
+/* Outputs data along the plate */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         // Creates the file for outputting data along the plate
         char plate_output_filename[80];
@@ -441,14 +441,18 @@ event output_data (t += PLATE_OUTPUT_TIMESTEP) {
         // Close plate output file
         fclose(plate_output_file);
         plate_output_no++; // Increments output number
+    }
+}
 
+event output_log (t += LOG_OUTPUT_TIMESTEP {
+/* Outputs data about the general flow */
+    if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         /* Outputs data to log file */
         fprintf(stderr, \
             "t = %.4f, F = %.6f, force_term = %.6f, avg = %.6f, std = %.6f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
             t, current_force, force_term, previous_avg, previous_std, s_current, ds_dt, d2s_dt2);
     }
 }
-
 
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 /* Outputs the interface locations of the droplet */
