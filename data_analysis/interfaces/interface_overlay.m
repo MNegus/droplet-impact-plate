@@ -15,20 +15,20 @@ function interface_overlay(plot_type)
 % expect a different directory for each simulation result.
 
 % Directory where the resulting videos are to be stored
-results_directory = "/mnt/newarre/analysis_tests";
+results_directory = "/mnt/newarre/cantilever_paper_data/validation/plate_width_validation/Analysis";
 
 % Master directory where all of the data is stored under (e.g. external
 % hard drive location)
-master_directory = "/mnt/newarre/analysis_tests/";
+master_directory = "/mnt/newarre/cantilever_paper_data/validation/plate_width_validation/";
 
 % Individual directory names under the master directory. We assume that the
 % interface files are stored under
 % master_directory/data_directory(k)/raw_data
-data_directories = ["wall_test", "stationary_prescribed", "coupled_test"];
+data_directories = ["plate_width_2", "plate_width_4", "plate_width_5"];
 no_dirs = length(data_directories); % Number of entries
 
 % Entries in the legend
-legend_entries = ["Wall", "Embedded", "$\alpha = 0.01, \gamma = 1$"];
+legend_entries = ["Plate width = 2", "Plate width = 4", "Plate width = 5"];
 
 
 % Concatenates the data_directories array with the master directory
@@ -41,7 +41,7 @@ end
 
 % MAKE BASED ON TIME
 % Range of plot numbers to record
-plot_range = 115:600;
+plot_range = 115:500;
 
 % Colors of the lines (assuming there are a maximum of 4 lines) 
 line_colors = [[0    0.4470    0.7410]; 
@@ -57,10 +57,25 @@ y_lower = -0.05
 x_limits = [0, 2]; y_limits = [y_lower, 2 + y_lower]; 
 
 % Width and height of figure (in pixels)
-width=800; height=800;
+width=600; height=600;
 
 % Video frame rate
-frame_rate = 5;
+frame_rate = 20;
+
+% Box to ignore points in where the bubble is
+bubble_box_width = 0.1;
+
+%% Physical parameters
+rho_w = 998;
+R0 = 1e-3;
+U0 = 5;
+T0 = R0 / U0;
+Patm = 10^5;
+
+% r_millimetre = @(r) R0 * r * 1000;
+r_millimetre = @(r) r;
+% t_millisecond = @(t) T0 * t * 1000;
+t_millisecond = @(t) t;
 
 %% Analytic solutions
 % Defines anonymous functions for the analytic solutions to the interface
@@ -139,6 +154,10 @@ for plot_no = plot_range
         [~, unique_idxs, ~] = uniquetol(interface_mat(:, 1), 1e-5);
         unique_mat = interface_mat(unique_idxs, :);
         
+        % Removes all points inside the bubble box
+        unique_mat = unique_mat((unique_mat(:, 1) > bubble_box_width) ...
+        | ( unique_mat(:, 2) > bubble_box_width), :);
+        
         % Sorts the matrix in ascending values of z (column 1)
         [~, sorted_idxs] = sort(unique_mat(:, 1));
         sorted_mat = unique_mat(sorted_idxs, :);
@@ -152,7 +171,7 @@ for plot_no = plot_range
         
         % Plot the line of best fit 
         figure(figure_no);
-        plot(r_interp, z_query, 'color', line_colors(k, :), ...
+        plot(r_millimetre(r_interp), r_millimetre(z_query), 'color', line_colors(k, :), ...
             'Linewidth', 2);
         
         % Turns on the hold after the first plot
@@ -170,8 +189,8 @@ for plot_no = plot_range
     % Figure properties
     %%%%%%%%%%%%%%%%%%%
     % Title
-    title(sprintf("Interfaces at $t = %.03f$", ...
-        interface_times(plot_no, 2)), ...
+    title(sprintf("Interfaces at $t = %.04f$", ...
+        t_millisecond(interface_times(plot_no, 2))), ...
         "Interpreter", "latex", 'Fontsize', 15);
     
     % Axes limits, labels and font sizes

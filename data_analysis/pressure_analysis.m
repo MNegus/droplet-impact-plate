@@ -14,7 +14,7 @@ addpath('pressures');
 
 % Parent directory where all of the data is stored under (e.g. external
 % hard drive location)
-parent_directory = "/mnt/newarre/a_1_runs/";
+parent_directory = "/mnt/newarre/const_acc_test/";
 
 % Directory where the resulting videos are to be stored
 results_directory = sprintf("%s/Analysis", parent_directory);
@@ -51,7 +51,7 @@ r_millimetre = @(r) R0 * r * 1000;
 t_millisecond = @(t) T0 * t * 1000;
 
 % (Constant) acceleration of the plate
-a = 1.0;
+a = 0.5;
 
 % Displacement of s
 s = @(t) 0.5 * a * t.^2;
@@ -81,7 +81,7 @@ times = dlmread(sprintf('%s/cleaned_data/plate_outputs/times.txt', data_director
 
 % Position to start video at
 start_pos =  115;
-end_pos = 900;
+end_pos = 600;
 
 output_range = start_pos : end_pos;
 no_frames = end_pos - start_pos;
