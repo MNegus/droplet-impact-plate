@@ -11,25 +11,25 @@ addpath(genpath("~/repos/plate-impact/data_analysis"));
 
 
 % Parent directory where all the data is held
-parent_directory = '/mnt/newarre/cantilever_paper_data/alpha_varying/';
+parent_directory = '/mnt/newarre/cantilever_paper_data/gamma_varying/';
 
 % Directory to save the figure(s)
 analysis_directory = "Analysis";
 analysis_directory = strcat(parent_directory, analysis_directory);
 
 % Range of alphas
-alphas = [1, 2, 5, 10, 20, 50, 100];
+gammas = [0, 10, 100, 500, 1000];
 
 % Defines arrays for all the values of alpha
-data_directories = string(length(alphas));
-legend_entries = string(length(alphas));
+data_directories = string(length(gammas));
+legend_entries = string(length(gammas));
 
-for k = 1 : length(alphas)
-    alpha = alphas(k);
+for k = 1 : length(gammas)
+    gamma = gammas(k);
     
-    data_directories(k) = [parent_directory, '/alpha_', num2str(alpha)];
+    data_directories(k) = [parent_directory, '/gamma_', num2str(gamma)];
     
-    legend_entries(k) = ['$\alpha =$ ', num2str(alpha)] ;
+    legend_entries(k) = ['$\gamma =$ ', num2str(gamma)] ;
 end
 
 % Stationary plate data
@@ -42,8 +42,8 @@ stationary_plate_directory = '/mnt/newarre/cantilever_paper_data/stationary_plat
 eps = 1;
 
 % Plate parameters
+alpha = 2;
 beta = 0;
-gamma = 0;
 
 % Initial drop height 
 initial_drop_heights = 0.125;
@@ -55,14 +55,14 @@ impact_time = initial_drop_heights;
 t_max = 0.8;
 
 %% Wagner solution
-% Stationary plate Wagner solution
-wagner_t = linspace(1e-7, t_max - impact_time, 1e3);
-s = zeros(size(wagner_t));
-sdot = zeros(size(wagner_t));
-sddot = zeros(size(wagner_t));
-
-% Composite force solution
-wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
+% % Stationary plate Wagner solution
+% wagner_t = linspace(1e-7, t_max - impact_time, 1e3);
+% s = zeros(size(wagner_t));
+% sdot = zeros(size(wagner_t));
+% sddot = zeros(size(wagner_t));
+% 
+% % Composite force solution
+% wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
 
 %% Plotting force comparisons
 close all;
@@ -80,10 +80,10 @@ for k = 1 : length(data_directories)
    plot(ts, Fs, 'Displayname', legend_entries(k));
 end
 
-% Analytical solution
-plot(wagner_t + impact_time, wagner_force, ...
-    'color', 0.5 * [1 1 1], 'Linewidth', 2, 'Linestyle', '--', ...
-    'Displayname', ['Analytical', newline, 'solution']);
+% % Analytical solution
+% plot(wagner_t + impact_time, wagner_force, ...
+%     'color', 0.5 * [1 1 1], 'Linewidth', 2, 'Linestyle', '--', ...
+%     'Displayname', ['Analytical', newline, 'solution']);
 
 % Stationary plate solution
 output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", ...
@@ -98,14 +98,14 @@ plot(ts, Fs, 'Linewidth', 2, 'color', 'black', ...
 xlim([0 t_max]);
 
 
-% Arrow for increasing alpha
-X = [0.4 0.5];
-Y = [0.2 0.6];
-annotation('arrow', X, Y);
-
-% Arrow label
-txt = '$\alpha$';
-text(0.39, 2.86, txt, "Interpreter", "Latex", "Fontsize", 14);
+% % Arrow for increasing alpha
+% X = [0.4 0.5];
+% Y = [0.2 0.6];
+% annotation('arrow', X, Y);
+% 
+% % Arrow label
+% txt = '$\alpha$';
+% text(0.39, 2.86, txt, "Interpreter", "Latex", "Fontsize", 14);
 
 legend("Interpreter", "latex", "location", "northwest", "Fontsize", 12);
 
@@ -116,8 +116,8 @@ ylabel("$F(t)$", 'Interpreter', 'latex');
 ax = gca;
 ax.FontSize = 12;
 set(gca,'TickLabelInterpreter','latex');
-title(['Force on plate: $\beta =$ ', ...
-    num2str(beta), ', $\gamma =$ ' num2str(gamma)], "Interpreter", "latex", ...
+title(['Force on plate: $\alpha =$ ', ...
+    num2str(alpha), ', $\beta =$ ' num2str(beta)], "Interpreter", "latex", ...
     'Fontsize', 14);
 print(gcf, sprintf("%s/force_comparison.png", analysis_directory), ...
     '-dpng', '-r300');
