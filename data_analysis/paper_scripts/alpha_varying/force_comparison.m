@@ -18,7 +18,7 @@ analysis_directory = "Analysis";
 analysis_directory = strcat(parent_directory, analysis_directory);
 
 % Range of alphas
-alphas = [1, 2, 5, 10, 20, 50, 100];
+alphas = [1, 2, 5, 10, 20, 100];
 
 % Defines arrays for all the values of alpha
 data_directories = string(length(alphas));
@@ -67,7 +67,7 @@ wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
 %% Plotting force comparisons
 close all;
 
-figure(1);
+fig = figure(1);
 hold on;
 
 for k = 1 : length(data_directories)
@@ -76,48 +76,60 @@ for k = 1 : length(data_directories)
    ts = output_mat(:, 1);
    Fs = output_mat(:, 3);
    
+   % Rescale ts with the impact time
+   ts = ts - impact_time;
+   
    figure(1);
-   plot(ts, Fs, 'Displayname', legend_entries(k));
+   plot(ts, Fs, 'Displayname', legend_entries(k), 'Linewidth', 2);
 end
 
-% Analytical solution
-plot(wagner_t + impact_time, wagner_force, ...
-    'color', 0.5 * [1 1 1], 'Linewidth', 2, 'Linestyle', '--', ...
-    'Displayname', ['Analytical', newline, 'solution']);
+
 
 % Stationary plate solution
 output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", ...
     stationary_plate_directory));
 ts = output_mat(:, 1);
+ts = ts - impact_time;
 Fs = output_mat(:, 3);
-plot(ts, Fs, 'Linewidth', 2, 'color', 'black', ...
+plot(ts, Fs, 'Linewidth', 3, 'color', 0.3 * [1 1 1], ...
     'Displayname', ['Stationary', newline, 'plate']);
+
+% Analytical solution
+plot(wagner_t, wagner_force, ...
+    'color', 'black', 'Linewidth', 3, 'Linestyle', '--', ...
+    'Displayname', ['Analytical', newline, 'solution']);
 
 
 % x limits
-xlim([0 t_max]);
+xlim([-impact_time  t_max - impact_time]);
 
 
 % Arrow for increasing alpha
-X = [0.4 0.5];
-Y = [0.2 0.6];
+X = [0.5 0.6];
+Y = [0.25 0.70];
 annotation('arrow', X, Y);
 
 % Arrow label
 txt = '$\alpha$';
-text(0.39, 2.86, txt, "Interpreter", "Latex", "Fontsize", 14);
+text(0.375, 3.4, txt, "Interpreter", "Latex", "Fontsize", 30);
 
-legend("Interpreter", "latex", "location", "northwest", "Fontsize", 12);
+% legend("Interpreter", "latex", "location", "northwest", "Fontsize", 12);
 
 grid on;
 xlabel("$t$", "Interpreter", "latex");
 ylabel("$F(t)$", 'Interpreter', 'latex');
-
+set(gca, 'XTick', 0 : 0.2 : t_max);
+set(gca, 'YTick', 0 : 1 : 5 );
 ax = gca;
-ax.FontSize = 12;
+ax.FontSize = 30;
 set(gca,'TickLabelInterpreter','latex');
-title(['Force on plate: $\beta =$ ', ...
-    num2str(beta), ', $\gamma =$ ' num2str(gamma)], "Interpreter", "latex", ...
-    'Fontsize', 14);
-print(gcf, sprintf("%s/force_comparison.png", analysis_directory), ...
-    '-dpng', '-r300');
+% title(['Force on plate: $\beta =$ ', ...
+%     num2str(beta), ', $\gamma =$ ' num2str(gamma)], "Interpreter", "latex", ...
+%     'Fontsize', 14);
+set(gcf, 'Position',  [0, 0, 500, 700]);
+ax = gca;
+
+plot_name = sprintf("%s/alpha_force_comparison.png", analysis_directory);
+pause(0.5);
+exportgraphics(ax, plot_name, 'resolution', 300);
+

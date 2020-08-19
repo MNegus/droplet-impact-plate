@@ -11,7 +11,7 @@ addpath(genpath("~/repos/plate-impact/data_analysis"));
 
 
 % Parent directory where all the data is held
-parent_directory = '/mnt/newarre/cantilever_paper_data/damping_alpha_2_gamma_100/';
+parent_directory = '/mnt/newarre/cantilever_paper_data/beta_varying/';
 
 % Directory to save the figure(s)
 analysis_directory = "Analysis";
@@ -57,19 +57,19 @@ t_max = 0.8;
 
 %% Wagner solution
 % Stationary plate Wagner solution
-% wagner_t = linspace(1e-7, t_max - impact_time, 1e3);
-% s = zeros(size(wagner_t));
-% sdot = zeros(size(wagner_t));
-% sddot = zeros(size(wagner_t));
-% 
-% % Composite force solution
-% wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
+wagner_t = linspace(1e-7, t_max - impact_time, 1e3);
+s = zeros(size(wagner_t));
+sdot = zeros(size(wagner_t));
+sddot = zeros(size(wagner_t));
+
+% Composite force solution
+wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
 
 %% Plotting
 close all;
 
 % Force comparison
-figure(1);
+fig = figure(1);
 hold on;
 
 
@@ -78,12 +78,12 @@ for k = 1 : length(data_directories)
    
    ts = output_mat(:, 1);
    Fs = output_mat(:, 3);
-   ss = output_mat(:, 6);
-   sdots = output_mat(:, 7);
-   sddots = output_mat(:, 8);
+   
+   % Rescale ts with the impact time
+   ts = ts - impact_time;
    
    figure(1);
-   plot(ts, Fs, 'Displayname', legend_entries(k));
+   plot(ts, Fs, 'Displayname', legend_entries(k), 'Linewidth', 2);
    
 end
 
@@ -92,39 +92,46 @@ figure(1);
 output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", ...
     stationary_plate_directory));
 ts = output_mat(:, 1);
+ts = ts - impact_time;
 Fs = output_mat(:, 3);
-plot(ts, Fs, 'Linewidth', 2, 'color', 'black', ...
+plot(ts, Fs, 'Linewidth', 3, 'color', 0.3 * [1 1 1], ...
     'Displayname', ['Stationary', newline, 'plate']);
 
-% plot(wagner_t + impact_time, wagner_force, ...
-%     'color', 0.5 * [1 1 1], 'Linewidth', 2, 'Linestyle', '--', ...
-%     'Displayname', ['Analytical', newline, 'solution']);
-legend("Interpreter", "latex", "location", "southeast", "Fontsize", 12);
+plot(wagner_t, wagner_force, ...
+    'color', 'black', 'Linewidth', 3, 'Linestyle', '--', ...
+    'Displayname', ['Analytical', newline, 'solution']);
+% legend("Interpreter", "latex", "location", "southeast", "Fontsize", 12);
 
 % x limits
-xlim([0 t_max]);
+xlim([-impact_time t_max - impact_time]);
 
 
 % Arrow for increasing beta
-X = [0.5 0.4];
-Y = [0.5 0.65];
+X = [0.55 0.375];
+Y = [0.45 0.675];
 annotation('arrow', X, Y);
 grid on;
 xlabel("$t$", "Interpreter", "latex");
 ylabel("$F(t)$", 'Interpreter', 'latex');
+set(gca, 'XTick', 0 : 0.2 : t_max);
+set(gca, 'YTick', 0 : 1 : 5 );
 
 % Arrow label
 txt = '$\beta$';
-text(0.31, 2.65, txt, "Interpreter", "Latex", "Fontsize", 14);
-
-
+text(0.035, 3.3, txt, "Interpreter", "Latex", "Fontsize", 30);
 
 ax = gca;
-ax.FontSize = 12;
+ax.FontSize = 30;
 set(gca,'TickLabelInterpreter','latex');
-title(['Force on plate: $\alpha =$ ', ...
-    num2str(alpha), ', $\gamma =$ ' num2str(gamma)], "Interpreter", "latex", ...
-    'Fontsize', 14);
-print(gcf, sprintf("%s/force_comparison.png", analysis_directory), ...
-    '-dpng', '-r300');
+% title(['Force on plate: $\alpha =$ ', ...
+%     num2str(alpha), ', $\gamma =$ ' num2str(gamma)], "Interpreter", "latex", ...
+%     'Fontsize', 14);
+
+set(gcf, 'Position',  [0, 0, 500, 700]);
+ax = gca;
+
+plot_name = sprintf("%s/beta_force_comparison.png", analysis_directory);
+pause(0.1);
+exportgraphics(ax, plot_name, 'resolution', 300);
+
 

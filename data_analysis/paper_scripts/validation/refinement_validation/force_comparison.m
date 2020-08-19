@@ -11,21 +11,21 @@ addpath(genpath("~/repos/plate-impact/data_analysis"));
 
 
 % Parent directory where all the data is held
-parent_directory = '/mnt/newarre/cantilever_paper_data/validation_alpha_100/refinement_validation/';
+parent_directory = '/mnt/newarre/cantilever_paper_data/validation/refinement_validation/';
 
 % Directory to save the figure(s)
 analysis_directory = "Analysis";
 analysis_directory = strcat(parent_directory, analysis_directory);
 
 % Defines array with both directories in
-data_directories = ["level_11", "level_12", "level_13"];
+data_directories = ["level_9", "level_10", "level_11", "level_12", "level_13"];
 
 % Concatenates arrays to include parent directory
 for k = 1 : length(data_directories)
     data_directories(k) = strcat(parent_directory, data_directories(k)); 
 end
 
-legend_entries = ["Level 11", "Level 12", "Level 13"];
+legend_entries = ["Level 9", "Level 10", "Level 11", "Level 12", "Level 13"];
 
 
 %% Parameters
