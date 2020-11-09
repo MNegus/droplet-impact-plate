@@ -23,7 +23,7 @@ const double PLATE_THICKNESS = 0.15; // Thickness (vertical direction)
 const double PLATE_VEL = 0; // Velocity of the plate
 
 /* Constant acceleration (if wanted) */
-const int CONST_ACC = 0; // Set to 1 to specify a constant acceleration
+const int CONST_ACC = 1; // Set to 1 to specify a constant acceleration
 const double PLATE_ACC = 0.; // Acceleration of the plate
 
 /* Plate ODE terms (only used when plate is coupled). Corresponds to 
@@ -36,7 +36,7 @@ const double GAMMA = 0.; // Elastic term
 const int PLATE_REFINE_NO = 4; // Number of max refinement cells above plate
 const int MOVIES = 1; // Boolean for producing movies
 const int MINLEVEL = 4; // Minimum refinement level 
-const int MAXLEVEL = 12; // Maximum refinement level
+const int MAXLEVEL = 8; // Maximum refinement level
 const double BOX_WIDTH = 3.0; // Width of the computational box
 const double START_OUTPUT_TIME = 0.0; // Time to start outputs
 const double END_OUTPUT_TIME = 2.0; // Time to end outputs
@@ -44,7 +44,7 @@ const double GFS_OUTPUT_TIMESTEP = 1e-2; // Time between gfs outputs
 const double PLATE_OUTPUT_TIMESTEP = 1e-3; // Time between plate outputs
 const double LOG_OUTPUT_TIMESTEP = 1e-4; // Time between log outputs
 const double INTERFACE_OUTPUT_TIMESTEP = 1e-3; // Time between interface outputs
-const double HARD_MAX_TIME = 0.5; // Hard maximum time 
+const double HARD_MAX_TIME = 0.01; // Hard maximum time 
 const double REMOVAL_DELAY = 0.02; // Time after pinch-off to start removal
 const double FORCE_DELAY_TIME = 0.01; // Delay time before force is applied on plate
 const int REMOVE_ENTRAPMENT = 0; // If 1, completely remove entrapped air

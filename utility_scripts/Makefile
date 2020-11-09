@@ -1,5 +1,4 @@
 
-CFLAGS += -O2 -L$(BASILISK)/gl -lglutils -lfb_osmesa -lGLU -lOSMesa -lm  -fopenmp 
-LIBS += -lgsl -lgslcblas 
+CFLAGS += -O2 -L$(BASILISK)/gl -lglutils -lfb_osmesa -lGLU -lOSMesa -lm  -fopenmp  
 include $(BASILISK)/Makefile.defs
 
