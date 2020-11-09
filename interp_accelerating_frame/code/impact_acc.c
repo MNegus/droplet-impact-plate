@@ -19,7 +19,6 @@
 #include "tag.h" // For removing small droplets
 #include "contact.h" // For imposing contact angle on the surface
 #include <omp.h> // For openMP parallel
-#include <gsl/gsl_fit.h> // For linear interpolating
 
 /* Computational constants derived from parameters */
 double MIN_CELL_SIZE; // Size of the smallest cell
