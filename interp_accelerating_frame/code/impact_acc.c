@@ -443,7 +443,7 @@ event output_plate (t += PLATE_OUTPUT_TIMESTEP) {
     }
 }
 
-event output_log (t += LOG_OUTPUT_TIMESTEP {
+event output_log (t += LOG_OUTPUT_TIMESTEP) {
 /* Outputs data about the general flow */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         /* Outputs data to log file */
