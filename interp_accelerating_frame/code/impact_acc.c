@@ -112,7 +112,7 @@ int main() {
 
     /* Allocates memory for the force and times arrays */
     if (PEAK_DETECT) {
-        filtered_forces = malloc(PEAK_DETECT * sizeof(double));
+        filtered_forces = malloc(PEAK_LAG * sizeof(double));
     }
 
     /* Initialises interface time file */
@@ -213,7 +213,7 @@ event moving_plate (t += 1e-4) {
         if (peak_no < PEAK_LAG) {
 
             // Populate array
-            filtered_forces[i] = current_force;
+            filtered_forces[peak_no] = current_force;
 
             // Specify forcing term for ODE
             force_term = current_force;
@@ -412,6 +412,7 @@ event small_droplet_removal (t += 1e-3) {
     }
 }
 
+
 event output_plate (t += PLATE_OUTPUT_TIMESTEP) {
 /* Outputs data along the plate */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
@@ -443,6 +444,7 @@ event output_plate (t += PLATE_OUTPUT_TIMESTEP) {
     }
 }
 
+
 event output_log (t += LOG_OUTPUT_TIMESTEP) {
 /* Outputs data about the general flow */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
@@ -452,6 +454,7 @@ event output_log (t += LOG_OUTPUT_TIMESTEP) {
             t, current_force, force_term, previous_avg, previous_std, s_current, ds_dt, d2s_dt2);
     }
 }
+
 
 event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 /* Outputs the interface locations of the droplet */
@@ -488,7 +491,82 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 }
 
 
-event movies (t += 1e-3) {
+// event movies (t += 1e-3) {
+// /* Produces movies using bview */ 
+//     if (MOVIES) {
+//         // Creates a string with the time to put on the plots
+//         char time_str[80];
+//         sprintf(time_str, "t = %g\n", t);
+
+//         /* Zoomed out view */
+//         // Set up bview box
+//         view (width = 1024, height = 1024, fov = 18.0, ty = -0.4, \
+//             quat = {0, 0, -0.707, 0.707});
+
+//         /* Movie of the volume fraction of the droplet */
+//         clear();
+//         draw_vof("f", lw = 2);
+//         squares("f", linear = true, spread = -1, linear = true, map = cool_warm); // RC - minor changes here and beyond
+//         mirror ({0,1}) {
+//             draw_vof("f", lw = 2);
+//             squares("f", linear = true, spread = -1, linear = true, map = cool_warm);
+//         }
+//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+//         save ("tracer.mp4");
+
+//         /* Movie of the vertical velocity */
+//         clear();
+//         draw_vof("f", lw = 2);
+//         squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
+//         mirror ({0,1}) {
+//             draw_vof("f", lw = 2);
+//             squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
+//         }
+//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+//         save ("vertical_vel.mp4");
+
+
+//         /* Movie of the horizontal velocity */
+//         clear();
+//         draw_vof("f", lw = 2);
+//         squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
+//         mirror ({0,1}) {
+//             draw_vof("f", lw = 2);
+//             squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
+//         }
+//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+//         save ("horizontal_vel.mp4");
+
+//         /* Movie of the pressure */
+//         clear();
+//         draw_vof("f", lw = 2);
+//         squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
+//         mirror ({0,1}) {
+//             draw_vof("f", lw = 2);
+//             squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
+//         }
+//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+//         save ("pressure.mp4");
+
+//         /* Zoomed in view of pressure around entrapped bubble */
+//         // Set up bview box
+//         view (width = 1024, height = 1024, fov = 5.0, ty = -0.1, \
+//             quat = {0, 0, -0.707, 0.707});
+
+//         clear();
+//         draw_vof("f", lw = 2);
+//         squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
+//         mirror ({0,1}) {
+//             draw_vof("f", lw = 2);
+//             squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
+//         }
+//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+//         save ("zoomed_pressure.mp4");
+//     }
+// }
+
+
+event alt_movies (t += 1e-3) {
 /* Produces movies using bview */ 
     if (MOVIES) {
         // Creates a string with the time to put on the plots
@@ -497,71 +575,90 @@ event movies (t += 1e-3) {
 
         /* Zoomed out view */
         // Set up bview box
-        view (width = 1024, height = 1024, fov = 18.0, ty = -0.4, \
+        view (width = 1024, height = 1024, fov = 18.0, ty = -0.475, tx = -0.475, \
             quat = {0, 0, -0.707, 0.707});
 
         /* Movie of the volume fraction of the droplet */
         clear();
-        draw_vof("f", lw = 2);
-        squares("f", linear = true, spread = -1, linear = true, map = cool_warm); // RC - minor changes here and beyond
-        mirror ({0,1}) {
+        mirror({0, 1}) {
             draw_vof("f", lw = 2);
-            squares("f", linear = true, spread = -1, linear = true, map = cool_warm);
+            squares("f", linear = true, spread = -1, linear = true, map = cool_warm); 
         }
         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
         save ("tracer.mp4");
 
-        /* Movie of the vertical velocity */
-        clear();
-        draw_vof("f", lw = 2);
-        squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
-        mirror ({0,1}) {
-            draw_vof("f", lw = 2);
-            squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
+        /* Pressure video, scaled by the stationary Wagner maximum */
+        for (int pcoeff = 0; pcoeff <= 4; pcoeff++) {
+            clear();
+            mirror({0, 1}) {
+                draw_vof("f", lw = 2);
+                if (t <= IMPACT_TIME) {
+                    squares("p", min = 0, linear = false, spread = -1, linear = true, map = cool_warm);
+                } else {
+                    double wagner_pmax = 3 / (8 * (t - IMPACT_TIME));
+                    squares("p", min = 0, max = wagner_pmax * (1 + 0.25 * pcoeff), linear = false, spread = -1, linear = true, map = cool_warm);
+                }
+            }
+            char pressure_vid_filename[80];
+            sprintf(pressure_vid_filename, "pressure_%d.mp4", pcoeff);
+            save (pressure_vid_filename);
         }
-        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-        save ("vertical_vel.mp4");
 
+        
 
-        /* Movie of the horizontal velocity */
-        clear();
-        draw_vof("f", lw = 2);
-        squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
-        mirror ({0,1}) {
-            draw_vof("f", lw = 2);
-            squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
+        /* Velocity videos. Aim is for each velocity component and norm, produce multiple videos with
+        different (fixed) colour maps */
+        
+        for (int velmax = 1; velmax <= 3; velmax++) {
+            /* Movie of velocity norm */
+
+            // Definition of velocity norm
+            scalar velnorm[];
+            foreach() {
+                velnorm[] = sq(u.x[]) + sq(u.y[]);
+            }
+
+            // Draws video of the velocity norm
+            clear();
+            mirror({0, 1}) {
+                draw_vof("f", lw = 2);
+                squares("velnorm", min = 0, max = velmax * velmax, linear = false, spread = -1, linear = true, map = cool_warm);
+            }
+            // draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+
+            char norm_vid_filename[80];
+            sprintf(norm_vid_filename, "velnorm_%d.mp4", velmax);
+            save (norm_vid_filename);
+
+            /* Movie of vertical velocity */
+            clear();
+            mirror({0, 1}) {
+                draw_vof("f", lw = 2);
+                squares("u.x", min = -velmax, max = velmax, linear = false, spread = -1, linear = true, map = cool_warm);
+            }
+            // draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+
+            char vertical_vid_filename[80];
+            sprintf(vertical_vid_filename, "vertical_vel_%d.mp4", velmax);
+            save (vertical_vid_filename);
+
+            /* Movie of horizontal velocity */
+            clear();
+            mirror({0, 1}) {
+                draw_vof("f", lw = 2);
+                squares("u.y", min = -velmax, max = velmax, linear = false, spread = -1, linear = true, map = cool_warm);
+            }
+            // draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
+
+            char horizontal_vid_filename[80];
+            sprintf(horizontal_vid_filename, "horizontal_vel_%d.mp4", velmax);
+            save (horizontal_vid_filename);
         }
-        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-        save ("horizontal_vel.mp4");
 
-        /* Movie of the pressure */
-        clear();
-        draw_vof("f", lw = 2);
-        squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-        mirror ({0,1}) {
-            draw_vof("f", lw = 2);
-            squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-        }
-        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-        save ("pressure.mp4");
 
-        /* Zoomed in view of pressure around entrapped bubble */
-        // Set up bview box
-        view (width = 1024, height = 1024, fov = 5.0, ty = -0.1, \
-            quat = {0, 0, -0.707, 0.707});
-
-        clear();
-        draw_vof("f", lw = 2);
-        squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-        mirror ({0,1}) {
-            draw_vof("f", lw = 2);
-            squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-        }
-        draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-        save ("zoomed_pressure.mp4");
+        
     }
 }
-
 
 event end (t = MAX_TIME) {
 /* Ends the simulation */ 
