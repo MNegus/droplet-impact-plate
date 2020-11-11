@@ -14,17 +14,17 @@ addpath('pressures');
 
 % Parent directories where all of the data is stored under (e.g. external
 % hard drive location)
-% stationary_directory = "/media/michael/newarre/cantilever_paper_data/stationary_plate";
-% moving_directory = "/media/michael/newarre/cantilever_paper_data/gamma_varying/gamma_500";
-stationary_directory = "/scratch/negus/cant_paper_vid_comparisons/stationary";
-moving_directory = "/scratch/negus/cant_paper_vid_comparisons/moving";
+stationary_directory = "/media/michael/newarre/cantilever_paper_data/stationary_plate";
+moving_directory = "/media/michael/newarre/cantilever_paper_data/gamma_varying/gamma_500";
+% stationary_directory = "/scratch/negus/cant_paper_vid_comparisons/stationary";
+% moving_directory = "/scratch/negus/cant_paper_vid_comparisons/moving";
 
 % Directory where the resulting videos are to be stored
-% results_directory = "/media/michael/newarre/presentation_data";
-results_directory = "/scratch/negus/cant_paper_vid_comparisons/results";
+results_directory = "/media/michael/newarre/presentation_data";
+% results_directory = "/scratch/negus/cant_paper_vid_comparisons/results";
 
 % Readable names to label the plots for each of the data directories
-legend_entries = ["Stationary", "Moving"];
+legend_entries = ["Numerical stationary", "Numerical moving"];
 
 %% Parameters
 
@@ -64,7 +64,7 @@ analytical_tvals = analytical_tvals(analytical_tvals > 0);
 
 % Position to start video at
 start_pos =  1;
-end_pos = 700;
+end_pos = 800;
 
 output_range = start_pos : end_pos;
 no_frames = end_pos - start_pos;
@@ -74,18 +74,19 @@ figure(1);
 hold on;
 grid on;
 xlabel("$r$", "Interpreter", "latex", 'Fontsize',30);
-ylabel("$p$", "Interpreter", "latex", 'Fontsize', 30);
+ylabel("$p(r, -s(t), t)$", "Interpreter", "latex", 'Fontsize', 30);
 ax = gca;
 ax.FontSize = 16;
 set(gca,'TickLabelInterpreter','latex');
 x_limits = [-3, 3];
-y_limits = [-1, 200];
+abs_pmax = 50;
+y_limits = [-1, abs_pmax];
 xlim(x_limits);
 ylim(y_limits);
 
 % Creates animated line for the Wagner pressure
-stationary_wagner_line = animatedline('color', [0 0 0], 'Linewidth', 1.5);
-moving_wagner_line = animatedline('color', [0 0 0], 'Linewidth', 1.5);
+stationary_wagner_line = animatedline('color', [0 0 0], 'Linewidth', 1.5, 'Linestyle', '--');
+moving_wagner_line = animatedline('color', 0.5 * [1 1 1], 'Linewidth', 1.5, 'Linestyle', '--');
 
 % % Wagner turnover line
 % wagner_turnover_line = animatedline('color', 'red', 'Linestyle', '--', ...
@@ -93,11 +94,14 @@ moving_wagner_line = animatedline('color', [0 0 0], 'Linewidth', 1.5);
 
 % MAKE THIS SMARTER
 % Creates animated lines for the numerical results
-stationary_line = animatedline('Color', [0, 0.4470, 0.7410], 'Linewidth', 1.5);
-moving_line = animatedline('Color', [0.8500, 0.3250, 0.0980], 'Linewidth', 1.5);
+% stationary_line = animatedline('Color', [0, 0.4470, 0.7410], 'Linewidth', 1.5);
+% moving_line = animatedline('Color', [0.8500, 0.3250, 0.0980], 'Linewidth', 1.5);
+stationary_line = animatedline('Color', [0 0 0], 'Linewidth', 1.5);
+moving_line = animatedline('Color', 0.5 * [1 1 1], 'Linewidth', 1.5);
+
 
 % Sets up the legend
-L = legend([legend_entries, "Wagner stationary", "Wagner moving"]);
+L = legend(["Wagner stationary", "Wagner moving", legend_entries]);
 set(L, 'Interpreter', 'latex');
 set(L, 'FontSize', 15);
 
@@ -114,7 +118,12 @@ writerObj.FrameRate = 25;
 open(writerObj);
 
 %%
-% Iterates over time
+% Iterates over timec
+
+dim = [.15 .6 .3 .3];
+str = "";
+h = annotation('textbox',dim,'String',str,'FitBoxToText','on', "Interpreter", "latex", 'Fontsize', 15);
+
 for m = start_pos : start_pos + no_frames -1
 
     t = times(m, 2); % Time
@@ -162,7 +171,7 @@ for m = start_pos : start_pos + no_frames -1
         %% Plots stationary line
         [~, ~, comp_rs, comp_ps] ...
             = outer_and_comp_pressure(t - impact_time, 0, 0, ...
-                0, 0, 1.25 * d, 1);
+                0, 0, 2 * d, 1);
             
         % Adds composite pressure to graph
         clearpoints(stationary_wagner_line);
@@ -189,19 +198,23 @@ for m = start_pos : start_pos + no_frames -1
 
     end
 
-    title(sprintf("Pressure: Accelerating frame. $t$ = %.3f",... 
-        times(m, 2) - impact_time),  ...
-        "Interpreter", "latex", 'Fontsize', 15);
+%     title(sprintf("$t$ = %.3f",... 
+%         times(m, 2) - impact_time),  ...
+%         "Interpreter", "latex", 'Fontsize', 15);
+    
+    str = sprintf("$t$ = %.3f", times(m, 2) - impact_time);
+    set(h, 'String',str);
     xlim(x_limits);
     
     wagner_pmax = 3 / (8 * (t - impact_time));
     if (t > impact_time)
-        y_limits = [-0.1 * wagner_pmax, 1.3 *  wagner_pmax];
-%         if (1.3 * wagner_pmax > 3)
-%             y_limits = [-0.1 * wagner_pmax, 1.3 *  wagner_pmax];
-%         else
-%             y_limits = [-0.1 * 3, 3];
-%         end
+        if (wagner_pmax > 1.3 * abs_pmax)
+            y_limits = [-0.1, abs_pmax];
+        elseif (1.3 * wagner_pmax > 3)
+            y_limits = [-0.1 * wagner_pmax, 1.3 *  wagner_pmax];
+        else
+            y_limits = [-0.1 * 3, 3];
+        end
     end
     ylim(y_limits);
     drawnow;
