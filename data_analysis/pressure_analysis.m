@@ -14,7 +14,7 @@ addpath('pressures');
 
 % Parent directory where all of the data is stored under (e.g. external
 % hard drive location)
-parent_directory = "/mnt/newarre/const_acc_test/";
+parent_directory = "/media/michael/newarre/const_acc_test/";
 
 % Directory where the resulting videos are to be stored
 results_directory = sprintf("%s/Analysis", parent_directory);
