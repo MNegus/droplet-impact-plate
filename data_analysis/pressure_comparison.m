@@ -14,11 +14,14 @@ addpath('pressures');
 
 % Parent directories where all of the data is stored under (e.g. external
 % hard drive location)
-stationary_directory = "/media/michael/newarre/cantilever_paper_data/stationary_plate";
-moving_directory = "/media/michael/newarre/cantilever_paper_data/gamma_varying/gamma_500";
+% stationary_directory = "/media/michael/newarre/cantilever_paper_data/stationary_plate";
+% moving_directory = "/media/michael/newarre/cantilever_paper_data/gamma_varying/gamma_500";
+stationary_directory = "/scratch/negus/cant_paper_vid_comparisons/stationary";
+moving_directory = "/scratch/negus/cant_paper_vid_comparisons/moving";
 
 % Directory where the resulting videos are to be stored
-results_directory = "/media/michael/newarre/presentation_data";
+% results_directory = "/media/michael/newarre/presentation_data";
+results_directory = "/scratch/negus/cant_paper_vid_comparisons/results";
 
 % Readable names to label the plots for each of the data directories
 legend_entries = ["Stationary", "Moving"];
@@ -61,7 +64,7 @@ analytical_tvals = analytical_tvals(analytical_tvals > 0);
 
 % Position to start video at
 start_pos =  1;
-end_pos = 800;
+end_pos = 700;
 
 output_range = start_pos : end_pos;
 no_frames = end_pos - start_pos;
@@ -100,7 +103,7 @@ set(L, 'FontSize', 15);
 
 % Sets pixel size of the figure
 width=2048;
-height=512;
+height=257; % Either 257 or 512
 set(gcf,'position',[10,10,width,height])
 % set(gca,'LooseInset',get(gca,'TightInset'))
 
@@ -194,7 +197,11 @@ for m = start_pos : start_pos + no_frames -1
     wagner_pmax = 3 / (8 * (t - impact_time));
     if (t > impact_time)
         y_limits = [-0.1 * wagner_pmax, 1.3 *  wagner_pmax];
-%         y_limits = [-0.1, 5];
+%         if (1.3 * wagner_pmax > 3)
+%             y_limits = [-0.1 * wagner_pmax, 1.3 *  wagner_pmax];
+%         else
+%             y_limits = [-0.1 * 3, 3];
+%         end
     end
     ylim(y_limits);
     drawnow;
