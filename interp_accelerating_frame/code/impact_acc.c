@@ -575,7 +575,9 @@ event alt_movies (t += 1e-3) {
 
         /* Zoomed out view */
         // Set up bview box
-        view (width = 1024, height = 1024, fov = 18.0, ty = -0.475, tx = -0.475, \
+        // view (width = 1024, height = 1024, fov = 18.0, ty = -0.475, tx = -0.475, \
+        //     quat = {0, 0, -0.707, 0.707});
+        view (width = 1024, height = 1024, fov = 9, ty = -0.235, tx = -0.235, \
             quat = {0, 0, -0.707, 0.707});
 
         /* Movie of the volume fraction of the droplet */
