@@ -16,12 +16,9 @@ addpath('pressures');
 % hard drive location)
 stationary_directory = "/media/michael/newarre/cantilever_paper_data/stationary_plate";
 moving_directory = "/media/michael/newarre/cantilever_paper_data/gamma_varying/gamma_500";
-% stationary_directory = "/scratch/negus/cant_paper_vid_comparisons/stationary";
-% moving_directory = "/scratch/negus/cant_paper_vid_comparisons/moving";
 
 % Directory where the resulting videos are to be stored
-results_directory = "/media/michael/newarre/presentation_data";
-% results_directory = "/scratch/negus/cant_paper_vid_comparisons/results";
+results_directory = "/home/michael/Documents/supplementary_material/pressure_videos";
 
 % Readable names to label the plots for each of the data directories
 legend_entries = ["Numerical stationary", "Numerical moving"];

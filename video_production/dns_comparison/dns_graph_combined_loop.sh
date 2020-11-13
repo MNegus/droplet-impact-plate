@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MAINDIR=/media/michael/newarre/presentation_data
+MAINDIR=/home/michael/Documents/supplementary_material/dns_videos
 OVERLAY=$MAINDIR/pressure_overlays/overlay_height_257_max_3.avi
 HEIGHT=250
 

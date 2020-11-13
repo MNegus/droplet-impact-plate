@@ -1,5 +1,5 @@
 function ds = turnover_points(output_range, parent_dir, plate_position, ...
-    plate_tol, bubble_box_width)
+    plate_tol, bubble_box_height, bubble_box_width)
 %TURNOVER_POINTS Reads simulation output to find the turnover points
 %   Function to read the interface files, which are of the form
 %   "interface_n.txt", where n is an integer in output_range and the files
@@ -17,7 +17,7 @@ for k = 1 : length(output_range)
     % Name of interface file
     filename ...
         = sprintf('%s/raw_data/interface_%d.txt', ...
-            parent_dir, output_range(k));
+            parent_dir, output_range(k))
         
     % Reads in the start and end points of the line segments, with z along
     % the horizontal axis and r along the vertical
@@ -33,10 +33,13 @@ for k = 1 : length(output_range)
     
     % Removes all points that are below the plate, i.e. only keep points
     % that have a z coordinate above the plate tolerance
+    if output_range(k) > 400
+        plate_tol = 0.05;
+    end
     uniq_points = uniq_points(uniq_points(:, 1) > plate_tol, :);
     
     % Removes all points inside the bubble box
-    uniq_points = uniq_points((uniq_points(:, 1) > bubble_box_width) ...
+    uniq_points = uniq_points((uniq_points(:, 1) > bubble_box_height) ...
         | (uniq_points(:, 2) > bubble_box_width), :);
     
     % Sorts the resulting vector in increasing z order
