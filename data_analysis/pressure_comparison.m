@@ -18,10 +18,10 @@ stationary_directory = "/media/michael/newarre/cantilever_paper_data/stationary_
 moving_directory = "/media/michael/newarre/cantilever_paper_data/gamma_varying/gamma_500";
 
 % Directory where the resulting videos are to be stored
-results_directory = "/home/michael/Documents/supplementary_material/pressure_videos";
+results_directory = "/home/michael/Documents/supplementary_material/";
 
 % Readable names to label the plots for each of the data directories
-legend_entries = ["Numerical stationary", "Numerical moving"];
+legend_entries = ["Stationary plate, numerical", "Moving plate, numerical"];
 
 %% Parameters
 
@@ -53,7 +53,7 @@ times = dlmread(sprintf('%s/cleaned_data/plate_outputs/times.txt', stationary_di
 
 % Analytical time variables
 analytical_tvals = times(:, 2) - impact_time;
-m0 = find(~analytical_tvals);
+m0 = find(~analytical_tvals)
 analytical_tvals = analytical_tvals(analytical_tvals > 0);
 
 % Solves for the plate displacement
@@ -75,7 +75,7 @@ ylabel("$p(r, -s(t), t)$", "Interpreter", "latex", 'Fontsize', 30);
 ax = gca;
 ax.FontSize = 16;
 set(gca,'TickLabelInterpreter','latex');
-x_limits = [-3, 3];
+x_limits = [-2.8, 2.8];
 abs_pmax = 50;
 y_limits = [-1, abs_pmax];
 xlim(x_limits);
@@ -98,9 +98,11 @@ moving_line = animatedline('Color', 0.5 * [1 1 1], 'Linewidth', 1.5);
 
 
 % Sets up the legend
-L = legend(["Wagner stationary", "Wagner moving", legend_entries]);
+L = legend(["Stationary plate, analytical", "Moving plate, analytical", legend_entries]);
 set(L, 'Interpreter', 'latex');
 set(L, 'FontSize', 15);
+set(L, 'Location', 'North');
+set(L, 'Numcolumns', 4);
 
 % Sets pixel size of the figure
 width=2048;
@@ -117,13 +119,13 @@ open(writerObj);
 %%
 % Iterates over timec
 
-dim = [.15 .6 .3 .3];
-str = "";
-h = annotation('textbox',dim,'String',str,'FitBoxToText','on', "Interpreter", "latex", 'Fontsize', 15);
+% dim = [.15 .6 .3 .3];
+% str = "";
+% h = annotation('textbox',dim,'String',str,'FitBoxToText','on', "Interpreter", "latex", 'Fontsize', 15);
 
 for m = start_pos : start_pos + no_frames -1
 
-    t = times(m, 2); % Time
+    t = times(m, 2) % Time
 
     d = sqrt(3 * t);
     
@@ -199,16 +201,16 @@ for m = start_pos : start_pos + no_frames -1
 %         times(m, 2) - impact_time),  ...
 %         "Interpreter", "latex", 'Fontsize', 15);
     
-    str = sprintf("$t$ = %.3f", times(m, 2) - impact_time);
-    set(h, 'String',str);
+%     str = sprintf("$t$ = %.3f", times(m, 2) - impact_time);
+%     set(h, 'String',str);
     xlim(x_limits);
     
     wagner_pmax = 3 / (8 * (t - impact_time));
     if (t > impact_time)
-        if (wagner_pmax > 1.3 * abs_pmax)
+        if (wagner_pmax > 1.5 * abs_pmax)
             y_limits = [-0.1, abs_pmax];
-        elseif (1.3 * wagner_pmax > 3)
-            y_limits = [-0.1 * wagner_pmax, 1.3 *  wagner_pmax];
+        elseif (1.5 * wagner_pmax > 3)
+            y_limits = [-0.1 * wagner_pmax, 1.5 *  wagner_pmax];
         else
             y_limits = [-0.1 * 3, 3];
         end
