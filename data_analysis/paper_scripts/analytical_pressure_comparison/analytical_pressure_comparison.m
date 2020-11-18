@@ -10,14 +10,30 @@ analysis_directory ...
 
 
 %% Parameters
+close all;
 eps = 0.1;
-for t = [1, 10]
-    s = 0;
-    sdot = 0;
-    sddot = 0;
+t_plot = [5]; % Values of t to plot
+
+% Alternative s values
+a = 0.02;
+s_alt = @(t) a * t^2 ;
+sdot_alt = @(t) 2 * a * t;
+sddot_alt = @(t) 2 * a;
+for k = [1, 2]
+    t = t_plot(1);
+    
+    if k == 1
+        s = 0;
+        sdot = 0;
+        sddot = 0;
+    else 
+        s = s_alt(t);
+        sdot = sdot_alt(t);
+        sddot = sddot_alt(t);
+    end
 
     % s depdendents
-    [d, ddot, dddot, J] = s_dependents(t, 0, 0, 0);
+    [d, ddot, dddot, J] = s_dependents(t, s, sdot, sddot);
 
     r_max = 1.25 * eps * d;
 
@@ -47,28 +63,39 @@ for t = [1, 10]
 
     %% Inner pressure
     [inner_rs, inner_ps] = inner_pressure(etas, J, d, ddot, eps);
-
+    
     %% Composite pressure
     [composite_rs, composite_ps] ...
         = composite_pressure(etas, d, ddot, dddot, J, eps);
 
     %% Plotting
-    close all;
+%     close all;
     figure(1);
     hold on;
-    h(3) = plot(composite_rs, composite_ps, 'Linewidth', 3, ...
-        'color', 0.5 * [1 1 1]);
-    h(1) = plot(outer_rs, outer_ps, 'Linewidth', 1.5, 'Linestyle', '--', ...
+    if k == 1
+        h(3) = plot(-composite_rs, composite_ps, 'Linewidth', 1.5, ...
         'color', 'black');
-    h(2) = plot(inner_rs, inner_ps, 'Linewidth', 1.5, 'Linestyle', ':', ...
-        'color', 'black');
-    h(4) = xline(eps * d, 'Linestyle', '--');
+        h(1) = plot(-outer_rs, outer_ps, 'Linewidth', 1.5, ...
+            'color', 'black', 'Linestyle', '--');
+        h(2) = plot(-inner_rs, inner_ps, 'Linewidth', 1.5, ...
+             'color', 'black', 'Linestyle', ':');
+        h(4) = xline(-eps * d, 'Linestyle', '--');
+    else
+        h(5) = plot(composite_rs, composite_ps, 'Linewidth', 1.5, ...
+            'color', 0.5 * [1 1 1]);
+        h(6) = plot(outer_rs, outer_ps, 'Linewidth', 1.5, 'Linestyle', '--', ...
+            'color', 0.5 * [1 1 1]);
+        h(7) = plot(inner_rs, inner_ps, 'Linewidth', 1.5, 'Linestyle', ':', ...
+            'color', 0.5 * [1 1 1]);
+        h(8) = xline(eps * d, 'Linestyle', '--');
 
+    end
+    
     legend(h([1 : 3]), ["Outer solution", "Inner solution", "Composite solution"], ...
-        "Interpreter", "latex", "location", "northwest", "Fontsize", 12);
-
-    ylim([0 1.75 * max(composite_ps)]);
-    xlim([0 1.25 * eps * d]);
+        "Interpreter", "latex", "location", "north", "Fontsize", 12);
+    
+    ylim([0 10]);
+    xlim([-0.45 0.45]);
 
     grid on;
     xlabel("$r$", "Interpreter", "latex");
@@ -76,10 +103,12 @@ for t = [1, 10]
     ax = gca;
     ax.FontSize = 12;
     set(gca,'TickLabelInterpreter','latex');
-    set(gcf, 'Position',  [0, 0, 400, 300]);
+    set(gcf, 'Position',  [0, 0, 650, 250]);
     ax = gca;
 
-    plot_name = sprintf("%s/analytical_pressure_comparison_%g.png", analysis_directory, t);
-    pause(0.1);
-    exportgraphics(ax, plot_name, 'resolution', 300);
+    
 end
+
+plot_name = sprintf("%s/analytical_pressure_comparison_mirrored.png", analysis_directory);
+pause(0.1);
+exportgraphics(ax, plot_name, 'resolution', 300);

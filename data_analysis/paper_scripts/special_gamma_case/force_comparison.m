@@ -54,8 +54,11 @@ t_max = 0.8;
 % Composite force solution
 wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
 
+
 %% Stationary plate Wagner solution
 stationary_force = composite_force(wagner_t, zeros(size(s)), ...
+    zeros(size(s)), zeros(size(s)), eps);
+stationary_outer_force = outer_force(wagner_t, zeros(size(s)), ...
     zeros(size(s)), zeros(size(s)), eps);
 
 %% Plotting
@@ -75,8 +78,9 @@ ts = ts - impact_time; % Shift time so t = 0 happens at impact time
 
 
 % Plots stationary plate solution
-plot(ts, Fs, 'Linewidth', 2, 'color', 0.75 * [1 1 1]);
-
+h(1) = plot(ts, Fs, 'Linewidth', 2, 'color', 'black');
+h(2) = plot(wagner_t, stationary_force, 'Linewidth', 1.5, 'linestyle', '--', ...
+    'color', 'black');
 
 % Moving plate output matrix
 output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", data_directory(1)));
@@ -87,18 +91,20 @@ Fs = output_mat(:, 3);
 ts = ts - impact_time; % Shift time so t = 0 happens at impact time
 
 % Plots moving plate solution
-plot(ts, Fs, 'Linewidth', 2, 'color', 0.25 * [1 1 1]);
+h(3) = plot(ts, Fs, 'Linewidth', 2, 'color', 0.6 * [1 1 1]);
+h(4) = plot(wagner_t, wagner_force, 'Linewidth', 1.5, 'linestyle', '--', ...
+    'color', 0.6 * [1 1 1]);
 
+% Plots vertical lines at labeled points
+h(5) = xline(0.015);
+h(6) = xline(0.295);
+h(7) = xline(0.535);
+h(8) = xline(0.675);
 
-% Plots Wagner solutions
-plot(wagner_t, stationary_force, 'Linewidth', 2, 'linestyle', '--', ...
-    'color', 'black');
-plot(wagner_t, wagner_force, 'Linewidth', 2, 'linestyle', ':', ...
-    'color', 'black');
+% Outer force
+% h(9) = plot(wagner_t, stationary_outer_force, 'Linewidth', 1.5, 'linestyle', '--', ...
+%     'color', 'blue');
 
-% legend(["Stationary computational", "Stationary analytical", ...
-%     "Moving computational", "Moving analytical"], ...
-%     "Interpreter", "latex", "location", "northwest", "Fontsize", 12);
 xlim([-impact_time t_max - impact_time]);
 grid on;
 xlabel("$t$", "Interpreter", "latex");
@@ -109,7 +115,12 @@ ylim([0 5.1]);
 set(gca, 'XTick', -impact_time : impact_time : t_max - impact_time);
 set(gca, 'YTick', 0 : 1 : 5);
 set(gca,'TickLabelInterpreter','latex');
-set(gcf, 'Position',  [0, 0, 700, 200]);
+set(gcf, 'Position',  [0, 0, 700, 250]);
+legend(h([2, 1, 4, 3]), ...
+    ["Stationary plate, analytical", "Stationary plate, numerical", ...
+        "Moving plate, analytical", "Moving plate, numerical"], ...
+    "Interpreter", "latex", "location", "northoutside", "Fontsize", 12, ...
+    "Numcolumns", 2);
 ax = gca;
 plot_name = sprintf("%s/force_comparison.png", analysis_directory);
 pause(0.1);

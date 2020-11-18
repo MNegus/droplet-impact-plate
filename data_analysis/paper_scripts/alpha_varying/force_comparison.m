@@ -70,8 +70,18 @@ close all;
 fig = figure(1);
 hold on;
 
+N = length(data_directories);
+
+start_color = 0.75;
+end_color = 0.3;
+
+m = (end_color - start_color) / (N - 1);
+c = 0.5 * (start_color + end_color - (N + 1) * m);
+
 for k = 1 : length(data_directories)
    output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", data_directories(k)));
+   
+   line_color = (m * k + c) * [1 1 1];
    
    ts = output_mat(:, 1);
    Fs = output_mat(:, 3);
@@ -80,7 +90,8 @@ for k = 1 : length(data_directories)
    ts = ts - impact_time;
    
    figure(1);
-   plot(ts, Fs, 'Displayname', legend_entries(k), 'Linewidth', 2);
+   plot(ts, Fs, 'Displayname', legend_entries(k), 'Linewidth', 2, ...
+       'color', line_color);
 end
 
 
@@ -91,7 +102,7 @@ output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", ...
 ts = output_mat(:, 1);
 ts = ts - impact_time;
 Fs = output_mat(:, 3);
-plot(ts, Fs, 'Linewidth', 3, 'color', 0.3 * [1 1 1], ...
+plot(ts, Fs, 'Linewidth', 3, 'color', 'black', ...
     'Displayname', ['Stationary', newline, 'plate']);
 
 % Analytical solution
