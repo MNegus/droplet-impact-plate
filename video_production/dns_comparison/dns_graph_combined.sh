@@ -18,16 +18,17 @@ ffmpeg -y -i $OVERLAY -filter:v "crop=1516:$HEIGHT:170:$HEIGHT" cropped_pressure
 ffmpeg -y -i cropped_pressure.mp4 -vf scale=2048:-1 graph_pressure.mp4
 
 # Pads the DNS video
-ffmpeg -y -i $DNS -vf "pad=width=2176:height=1024:x=103:y=0:color=white" padded_dns.mp4
+ffmpeg -y -i $DNS -vf "pad=width=2176:height=1152:x=103:y=0:color=white" padded_dns.mp4
+# ffmpeg -y -i $DNS -vf "pad=width=2176:height=1024:x=103:y=0:color=white" padded_dns.mp4
 
 # Rescales DNS video
 ffmpeg -y -i padded_dns.mp4 -vf scale=2048:-1 scaled_dns.mp4
 
-# # Combine videos
+# # # Combine videos
 ffmpeg -y -i scaled_dns.mp4 -i graph_pressure.mp4 -filter_complex vstack \
    $RESULT
 
-# Remove videos
+# # Remove videos
 rm padded_dns.mp4
 rm scaled_dns.mp4
 rm cropped_pressure.mp4
