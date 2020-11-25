@@ -11,11 +11,12 @@ addpath(genpath("~/repos/plate-impact/data_analysis"));
 
 
 % Parent directory where all the data is held
-parent_directory = '/mnt/newarre/cantilever_paper_data/alpha_varying/';
+parent_directory = '/media/michael/newarre/cantilever_paper_data/alpha_varying/';
 
 % Directory to save the figure(s)
-analysis_directory = "Analysis";
-analysis_directory = strcat(parent_directory, analysis_directory);
+% analysis_directory = "Analysis";
+% analysis_directory = strcat(parent_directory, analysis_directory);
+analysis_directory = "/home/michael/Documents/supplementary_material/animated_force_plots/alpha_varying";
 
 % Range of alphas
 alphas = [1, 2, 5, 10, 20, 100];
@@ -33,7 +34,7 @@ for k = 1 : length(alphas)
 end
 
 % Stationary plate data
-stationary_plate_directory = '/mnt/newarre/cantilever_paper_data/stationary_plate';
+stationary_plate_directory = '/media/michael/newarre/cantilever_paper_data/stationary_plate';
 
 
 %% Parameters
@@ -52,22 +53,22 @@ initial_drop_heights = 0.125;
 impact_time = initial_drop_heights;
 
 % Maximum time
-t_max = 0.8;
+tmax = 0.8;
 
 %% Wagner solution
 % Stationary plate Wagner solution
-wagner_t = linspace(1e-7, t_max - impact_time, 1e3);
+wagner_t = linspace(1e-7, tmax - impact_time, 1e3);
 s = zeros(size(wagner_t));
 sdot = zeros(size(wagner_t));
 sddot = zeros(size(wagner_t));
 
 % Composite force solution
-wagner_force = composite_force(wagner_t, s, sdot, sddot, eps);
+stationary_force = composite_force(wagner_t, s, sdot, sddot, eps);
 
 %% Plotting force comparisons
 close all;
 
-fig = figure(1);
+fig = figure(1); % Main figure
 hold on;
 
 N = length(data_directories);
@@ -78,41 +79,78 @@ end_color = 0.3;
 m = (end_color - start_color) / (N - 1);
 c = 0.5 * (start_color + end_color - (N + 1) * m);
 
-for k = 1 : length(data_directories)
-   output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", data_directories(k)));
-   
-   line_color = (m * k + c) * [1 1 1];
-   
-   ts = output_mat(:, 1);
-   Fs = output_mat(:, 3);
-   
-   % Rescale ts with the impact time
-   ts = ts - impact_time;
-   
-   figure(1);
-   plot(ts, Fs, 'Displayname', legend_entries(k), 'Linewidth', 2, ...
-       'color', line_color);
-end
-
-
-
 % Stationary plate solution
 output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", ...
     stationary_plate_directory));
 ts = output_mat(:, 1);
-ts = ts - impact_time;
-Fs = output_mat(:, 3);
-plot(ts, Fs, 'Linewidth', 3, 'color', 'black', ...
+stationary_ts = ts - impact_time;
+stationary_Fs = output_mat(:, 3);
+plot(stationary_ts, stationary_Fs, 'Linewidth', 3, 'color', 'black', ...
     'Displayname', ['Stationary', newline, 'plate']);
 
 % Analytical solution
-plot(wagner_t, wagner_force, ...
+plot(wagner_t, stationary_force, ...
     'color', 'black', 'Linewidth', 3, 'Linestyle', '--', ...
     'Displayname', ['Analytical', newline, 'solution']);
 
+for k = 1 : length(data_directories)
+    
+    output_mat = dlmread(sprintf("%s/cleaned_data/output.txt", data_directories(k)));
 
+    line_color = (m * k + c) * [1 1 1];
+
+    ts = output_mat(:, 1);
+    Fs = output_mat(:, 3);
+
+    % Rescale ts with the impact time
+    ts = ts - impact_time;
+
+    %% Main figure
+    figure(1);
+    plot(ts, Fs, 'Linewidth', 2, ...
+       'color', line_color);
+
+    %% Sub figure with just stationary and current line
+    % Solves for analytical solution
+    [moving_t, s, sdot, sddot] = s_solution(tmax - impact_time, alphas(k), beta, gamma, eps)
+    moving_force = composite_force(moving_t, s, sdot, sddot, eps);
+    
+    
+    figure(2);
+    set(gcf, 'Position',  [0, 0, 500, 700]);
+    % Plots stationary plate solution
+    plot(stationary_ts, stationary_Fs, 'Linewidth', 3, 'color', 'black');
+    hold on;
+    plot(wagner_t, stationary_force, ...
+        'color', 'black', 'Linewidth', 3, 'Linestyle', '--');
+    
+    % Plots specific alpha line
+    plot(ts, Fs, 'Linewidth', 2, 'color', 0.5 * [1 1 1]);
+    plot(moving_t, moving_force, 'Linestyle', '--', ...
+        'Linewidth', 2, 'color', 0.5 * [1 1 1]);
+    hold off;
+    % Figure properties
+    % x limits
+    xlim([-impact_time  tmax - impact_time]);
+    grid on;
+    xlabel("$t$", "Interpreter", "latex");
+    ylabel("$F(t)$", 'Interpreter', 'latex');
+    set(gca, 'XTick', 0 : 0.2 : tmax);
+    set(gca, 'YTick', 0 : 1 : 5 );
+    ax = gca;
+    ax.FontSize = 30;
+    set(gca,'TickLabelInterpreter','latex');
+    set(gcf, 'Position',  [0, 0, 500, 700]);
+    ax = gca;
+    plot_name = sprintf("%s/alpha_%d.png", analysis_directory, alphas(k));
+    pause(1.0);
+    exportgraphics(ax, plot_name, 'resolution', 300);
+end
+
+
+figure(1);
 % x limits
-xlim([-impact_time  t_max - impact_time]);
+xlim([-impact_time  tmax - impact_time]);
 
 
 % Arrow for increasing alpha
@@ -129,7 +167,7 @@ text(0.375, 3.4, txt, "Interpreter", "Latex", "Fontsize", 30);
 grid on;
 xlabel("$t$", "Interpreter", "latex");
 ylabel("$F(t)$", 'Interpreter', 'latex');
-set(gca, 'XTick', 0 : 0.2 : t_max);
+set(gca, 'XTick', 0 : 0.2 : tmax);
 set(gca, 'YTick', 0 : 1 : 5 );
 ax = gca;
 ax.FontSize = 30;
