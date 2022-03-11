@@ -53,3 +53,4 @@ const int PEAK_LAG = 4; // Lag used in peak detection
 const double PEAK_THRESHOLD = 4.0; // Number of std devs away from mean
 const double PEAK_INFLUENCE = 0.1; // Influence weighting from peak data
 const double PEAK_DELAY = 0.135; // Delay before peak detection starts
+const double DROP_REFINED_WIDTH = 0.04; // width of refined region around droplet
