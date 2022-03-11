@@ -1,27 +1,32 @@
-# plate-impact
-
 Code for conducting direct numerical simulations for droplet impact onto 
 spring-supported plates using [Basilisk](<http://basilisk.fr/>). Used in 
-producing the results for [Droplet impact onto a spring-supported plate: analysis and simulations](<https://link.springer.com/article/10.1007/s10665-021-10107-5/>)
+producing the results for our recent paper [Droplet impact onto a spring-supported plate: analysis and simulations](<https://link.springer.com/article/10.1007/s10665-021-10107-5/>) in the Journal of Engineering Mathematics.
 
 Contributors: [Michael Negus](<https://www.maths.ox.ac.uk/people/michael.negus>), [Radu Cimpeanu](<https://warwick.ac.uk/fac/sci/maths/people/staff/cimpeanu/>), [Matthew Moore](<https://www.hull.ac.uk/staff-directory/matthew-moore>), [James Oliver](<https://www.maths.ox.ac.uk/people/james.oliver>)
 
 ![Program Screenshot](assets/images/dns_set_up.jpg)
 
-## Preamble
-* [Basilisk](<http://basilisk.fr/>) is an open source volume of fluid (VOF) package that can be used to solve the incompressible Navier-Stokes equations
-* In particular, Basilisk is well suited to solving two-phase flow problems such as droplet impact
 
-## Getting started
-# Package dependencies
+# Installation
+* A recent installation of [Basilisk](<http://basilisk.fr/>) is required to run 
+the simulations, see [here](<http://basilisk.fr/src/INSTALL>) for installation
+instructions for Basilisk. 
+* The [additional packages for visualisation](<http://basilisk.fr/src/gl/INSTALL>) 
+are also required if you wish to produce movies of the simulations, however this
+option can be turned off if you do not wish to install the additional packages.
+* An installation of [gfsview](http://gfs.sourceforge.net/wiki/index.php/Main_Page) 
+is also recommended for visualising the gfs_output files.
+* Most of the data analysis files are written in MATLAB, however the data 
+output of the Basilisk scripts are in a general form that any data analysis
+toolset can be used.
 
-## Tutorial
 
-# Example run
+# Tutorial
+## Example run
 
-# Specifying your own parameters
+## Specifying your own parameters
 
-# Understanding the data output
+## Understanding the data output
 
 
 
