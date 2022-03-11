@@ -66,7 +66,8 @@ for k = 1 : length(output_range)
     else  
         % Else, the turnover point is the local minimum with the highest z 
         % value
-        turnover_z = max(zs(local_mins));
+%         turnover_z = max(zs(local_mins));
+        turnover_z = min(zs(local_mins));
         turnover_r = r_interp(turnover_z);
     end
         

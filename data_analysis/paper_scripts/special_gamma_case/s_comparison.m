@@ -11,7 +11,7 @@ addpath(genpath("~/repos/plate-impact/data_analysis"));
 
 
 % Parent directory where all the data is held
-parent_directory = '/mnt/newarre/cantilever_paper_data/';
+parent_directory = '/media/michael/newarre/cantilever_paper_data/';
 
 % Directory to save the figure(s)
 analysis_directory = "special_case/Analysis";

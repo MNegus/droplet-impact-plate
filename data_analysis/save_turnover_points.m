@@ -12,4 +12,6 @@ output_matrix(:, 3) = ds(:, 2);
 
 dlmwrite(sprintf('%s/cleaned_data/turnover_points.txt', parent_dir), ...
     output_matrix);
+
+plot(output_range, ds(:, 1));
 end

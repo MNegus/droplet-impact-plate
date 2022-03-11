@@ -1,4 +1,4 @@
-function [t, s, sdot, sddot] = s_solution(tvals, alpha, beta, gamma, eps)
+function [t, s, sdot, sddot] = s_solution_alt(tvals, alpha, beta, gamma, eps)
 
 addpath("forces");
 
@@ -30,7 +30,7 @@ sddot0 = 0;
 %% ODE solving
 % Cantilever ODE
 cant_ode = @(t, y, yp) [yp(1) - y(2); ...
-    alpha * yp(2) + beta * yp(1) + gamma * y(1) ...
+    alpha * yp(2) / eps^2 + beta * yp(1) + eps^2 * gamma * y(1) ...
         - composite_force(t, y(1), yp(1), yp(2), eps)];
 
 % Initial conditions for s
@@ -39,7 +39,7 @@ yp0 = [sdot0; sddot0];
 
 
 % Use ODE15s to solve
-ode_options = odeset('RelTol',1e-4,'AbsTol',1e-5, 'MaxStep', 1e-3, 'Stats', 'on');
+ode_options = odeset('RelTol',1e-4,'AbsTol',1e-5, 'MaxStep', 1e-3 / eps^2, 'Stats', 'on');
 [t, y] = ode15i(cant_ode, tvals, y0, yp0, ode_options);
 
 % Saves s and its derivatives
