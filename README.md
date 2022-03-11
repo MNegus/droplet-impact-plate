@@ -1,5 +1,5 @@
 # plate-impact
-![Program Screenshot](assets/images/dns_set_up.png)]
+![Program Screenshot](assets/images/dns_set_up.jpg)]
 
 Code for conducting direct numerical simulations for droplet impact onto 
 spring-supported plates using [Basilisk](<http://basilisk.fr/>). 
