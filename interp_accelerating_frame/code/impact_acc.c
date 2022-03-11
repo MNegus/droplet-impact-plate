@@ -83,7 +83,7 @@ h.t[left] = contact_angle (theta0*pi/180.); // RC contact angle
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit);
         
-int main() {level_10
+int main() {
 /* Main function to set up the simulation */
 
     /* Create the computational domain */
