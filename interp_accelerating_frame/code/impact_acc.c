@@ -83,7 +83,7 @@ h.t[left] = contact_angle (theta0*pi/180.); // RC contact angle
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit);
         
-int main() {
+int main() {level_10
 /* Main function to set up the simulation */
 
     /* Create the computational domain */
@@ -590,7 +590,8 @@ event alt_movies (t += 1e-3) {
         save ("tracer.mp4");
 
         /* Pressure video, scaled by the stationary Wagner maximum */
-        for (int pcoeff = 0; pcoeff <= 4; pcoeff++) {
+        // for (int pcoeff = 0; pcoeff <= 4; pcoeff++) {
+            int pcoeff = 3;
             clear();
             mirror({0, 1}) {
                 draw_vof("f", lw = 2);
@@ -604,35 +605,16 @@ event alt_movies (t += 1e-3) {
             char pressure_vid_filename[80];
             sprintf(pressure_vid_filename, "pressure_%d.mp4", pcoeff);
             save (pressure_vid_filename);
-        }
+        // }
 
         
 
         /* Velocity videos. Aim is for each velocity component and norm, produce multiple videos with
         different (fixed) colour maps */
         
-        for (int velmax = 1; velmax <= 3; velmax++) {
-            /* Movie of velocity norm */
-
-            // Definition of velocity norm
-            scalar velnorm[];
-            foreach() {
-                velnorm[] = sq(u.x[]) + sq(u.y[]);
-            }
-
-            // Draws video of the velocity norm
-            clear();
-            mirror({0, 1}) {
-                draw_vof("f", lw = 2);
-                squares("velnorm", min = 0, max = velmax * velmax, linear = false, spread = -1, linear = true, map = cool_warm);
-            }
-            // draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-
-            char norm_vid_filename[80];
-            sprintf(norm_vid_filename, "velnorm_%d.mp4", velmax);
-            save (norm_vid_filename);
-
+        // for (int velmax = 1; velmax <= 3; velmax++) {
             /* Movie of vertical velocity */
+            int velmax = 2;
             clear();
             mirror({0, 1}) {
                 draw_vof("f", lw = 2);
@@ -645,6 +627,7 @@ event alt_movies (t += 1e-3) {
             save (vertical_vid_filename);
 
             /* Movie of horizontal velocity */
+            velmax = 3;
             clear();
             mirror({0, 1}) {
                 draw_vof("f", lw = 2);
@@ -655,7 +638,7 @@ event alt_movies (t += 1e-3) {
             char horizontal_vid_filename[80];
             sprintf(horizontal_vid_filename, "horizontal_vel_%d.mp4", velmax);
             save (horizontal_vid_filename);
-        }
+        // }
 
 
         
