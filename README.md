@@ -1,10 +1,12 @@
 # plate-impact
-![Program Screenshot](assets/images/dns_set_up.jpg)]
 
 Code for conducting direct numerical simulations for droplet impact onto 
-spring-supported plates using [Basilisk](<http://basilisk.fr/>). 
+spring-supported plates using [Basilisk](<http://basilisk.fr/>). Used in 
+producing the results for [Droplet impact onto a spring-supported plate: analysis and simulations](<https://link.springer.com/article/10.1007/s10665-021-10107-5/>)
 
-Contributors: [Radu Cimpeanu](<https://warwick.ac.uk/fac/sci/maths/people/staff/cimpeanu/>), [Matthew Moore](<https://www.maths.ox.ac.uk/people/matthew.moore>), [James Oliver](<https://www.maths.ox.ac.uk/people/james.oliver>)
+Contributors: [Michael Negus](<https://www.maths.ox.ac.uk/people/michael.negus>), [Radu Cimpeanu](<https://warwick.ac.uk/fac/sci/maths/people/staff/cimpeanu/>), [Matthew Moore](<https://www.hull.ac.uk/staff-directory/matthew-moore>), [James Oliver](<https://www.maths.ox.ac.uk/people/james.oliver>)
+
+![Program Screenshot](assets/images/dns_set_up.jpg)
 
 ## Preamble
 * [Basilisk](<http://basilisk.fr/>) is an open source volume of fluid (VOF) package that can be used to solve the incompressible Navier-Stokes equations
