@@ -152,10 +152,7 @@ produced in a bunch of mp4 files. These are the easiest ways to visualise the
 simulation.
 * **gfs files**  
 These files with a .gfs extension are files that can be opened using gfsview (if
-you have installed it). I.e. to open the `gfs_output_1.gfs`, call
-```shell
-gfsview2D gfs_output_1.gfs
-```
+you have installed it). I.e. to open the `gfs_output_1.gfs`, call `gfsview2D gfs_output_1.gfs`. 
 See the Gerris website for more details on how to work gfsview. 
 * **interface_N.txt**  
 At regular intervals, the interface of the droplet is outputted into the
