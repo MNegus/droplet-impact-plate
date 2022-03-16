@@ -108,6 +108,7 @@ set(L, 'Numcolumns', 4);
 width=2048;
 height=257; % Either 257 or 512
 set(gcf,'position',[10,10,width,height])
+set(gcf,'color','w');
 % set(gca,'LooseInset',get(gca,'TightInset'))
 
 % Create the video writer with 5 fps

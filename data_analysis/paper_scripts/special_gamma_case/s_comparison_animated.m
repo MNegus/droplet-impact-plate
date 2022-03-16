@@ -81,7 +81,7 @@ scatter_line = animatedline('Marker','o');
 
 L = legend(["Analytical", "Numerical"]);
 set(L, 'Interpreter', 'latex');
-set(L, 'FontSize', 16);
+set(L, 'FontSize', 20);
 set(L, 'Location', 'Northwest');
 set(L, 'Numcolumns', 2);
 
@@ -90,10 +90,10 @@ grid on;
 xlabel("$t$", "Interpreter", "latex", 'Fontsize',30);
 ylabel("$s(t)$", 'Interpreter', 'latex', 'Fontsize',30);
 ax = gca;
-ax.FontSize = 16;
+ax.FontSize = 20;
 set(gca,'TickLabelInterpreter','latex');
 set(gca, 'XTick', -impact_time : impact_time : t_max - impact_time);
-
+set(gcf,'color','w');
 
 
 for m = 1 : 10 : length(num_times)
