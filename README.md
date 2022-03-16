@@ -120,6 +120,28 @@ nohup ./run_simulation droplet_impact_plate N &
 should kick off the simulation! 
 
 ## Understanding the data output
+The simulations produce a lot of data output, and on their own they can be
+confusing and disorganised! Once the simulation has finished, all of these output
+files are left in the `raw_data` directory. Here we detail what these files are:
+* **mp4 files**  
+Simply, if you've chosen to output movies, then movies of the process will be 
+produced in a bunch of mp4 files. These are the easiest ways to visualise the
+simulation.
+
+
+
+
+To make this a little more friendly,
+you can clean up the data by going into the `utility_scripts` directory and
+running the command 
+```shell
+./output_clean.sh dir
+```
+where `dir` is the address to the directory where the `code` and `raw_data`
+directories are. To try this out, you can run this command for the example run. 
+This command will move some of the data from the `raw_data` directory into new
+directories that make it easier to access
+
 
 
 
