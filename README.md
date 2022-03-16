@@ -20,6 +20,17 @@ is also recommended for visualising the gfs_output files.
 output of the Basilisk scripts are in a general form that any data analysis
 toolset can be used.
 
+# A mathematical note on coordinates and time
+These simulations take place within an axisymmetric framework with coordinates
+(r, z). In Basilisk, the axisymmetric coordinates are given by x = z, y = r, 
+so within the code keep in mind that, counter-intuitively, the vertical direction
+is given by x and the radial by y.
+
+In addition, the time coordinates in the paper are scaled such that t = 0 at the
+time of impact. Within the simulations, the droplet is initialised at a height
+given by `INITIAL_DROP_HEIGHT` at `t = 0`, so the impact time is at `t = INITIAL_DROP_HEIGHT`.
+This means when comparing the computational and analytical solutions, the 
+computational time will need to be adjusted by this amount.  
 
 # Tutorial
 Below we give a brief tutorial as to how to run a simulation. Although not strictly
@@ -123,16 +134,46 @@ should kick off the simulation!
 The simulations produce a lot of data output, and on their own they can be
 confusing and disorganised! Once the simulation has finished, all of these output
 files are left in the `raw_data` directory. Here we detail what these files are:
-* **mp4 files**  
+* **log**  
+The log file outputs the relevant global quantities for `t += 1e-4`. Specifically,
+these are:
+- `F`: The unfiltered force on the plate at time `t`
+- `force_term`: The force term after filtering
+- `avg`: The average force over the last `PEAK_LAG` timesteps
+- `std`: The standard deviation of the force over the last `PEAK_LAG` timesteps
+- `s`: The plate position
+- `ds_dt`: The first time derivative of the plate position
+- `d2s_dt2`: The second time derivative of the plate position
+The log file is in a readable form, but will need to be cleaned to use in post-processing
+(see later in this section).
+* **mp4 files**    
 Simply, if you've chosen to output movies, then movies of the process will be 
 produced in a bunch of mp4 files. These are the easiest ways to visualise the
 simulation.
+* **gfs files**  
+These files with a .gfs extension are files that can be opened using gfsview (if
+you have installed it). I.e. to open the `gfs_output_1.gfs`, call
+```shell
+gfsview2D gfs_output_1.gfs
+```
+See the Gerris website for more details on how to work gfsview. 
+* **interface_N.txt**  
+At regular intervals, the interface of the droplet is outputted into the
+`interface_N.txt` files, where N is incrememented. These files contain the start
+and end points coordinates of each line segment along the interface. This can
+either be used to visualise the interface in a ``smart" way by drawing the line 
+segments, or just producing a scatter plot out of all of the points.
+* **plate_output_N.txt**  
+At regular time intervals, these files output the pressure `p` and viscous stress
+`strss` along the plate at x = 0 (i.e. z) for various y (i.e. r). In its
+raw form these are in a readable format, and after cleaning these can be
+used to visualise the evolution pressure and viscous stress in post-processing/
 
 
-
-
-To make this a little more friendly,
-you can clean up the data by going into the `utility_scripts` directory and
+### Data cleaning
+As mentioned, the `log` and `plate_output_N.txt` files are in a human-readable
+form, which is no good for post-processing. You can clean these scripts by going
+ into the `utility_scripts` directory and
 running the command 
 ```shell
 ./output_clean.sh dir
@@ -140,25 +181,26 @@ running the command
 where `dir` is the address to the directory where the `code` and `raw_data`
 directories are. To try this out, you can run this command for the example run. 
 This command will move some of the data from the `raw_data` directory into new
-directories that make it easier to access
+directories that make it easier to access, such as moving the mp4 files into the
+`movies` directory and the gfs files into a `gfs_files` directory, and move the 
+`log` file into the parent directory. It also creates a new `cleaned_data` 
+directory, where the file `output.txt` is the `log` file after removing all of 
+the non-numeric text, and similarly the `plate_outputs` directory contains 
+cleaned versions of all of the `plate_output_N.txt` files. These are less human-readable,
+but are in a form where you can use post-processing. For example, you can
+call MATLAB's `readmatrix` function directly onto any of these files to get a 
+matrix with the same rows and columns as these text files.
+
+## Post-processing
+After cleaning the data, you should be ready to analysis the data in post-processing.
+There are many scripts for this in the `data_analysis` directory, however these
+currently have not been organised very well. It may instead be best to write your
+own post-processing scripts with your language of choice, as this is the best way
+to get to grips with the output, however if you get stuck then exploring the
+contents of `data_analysis` may help.
 
 
-
-
-<!-- ## The problem
-* We wish to study the dynamics of droplets impacting onto deformable substrates, such as elastic sheets or cling film (see [Splashing on elastic membranes: The importance of early-time dynamics](<https://aip.scitation.org/doi/full/10.1063/1.2969755>)).
-* As a first step towards this goal, we would like to conduct simulations of impact onto flat plates which are restricted to moving in the vertical direction
-* This requires embedding a solid into the computational domain of the problem
-* Basilisk currently only supports embedding solids in two-phase problems when only one of the phases makes contact with the solid (such as [flow over a bump](<http://basilisk.fr/src/examples/gaussian-ns.c>))
-* The issue here is that both the air and the liquid phase will meet the substrate during droplet impact, so we cannot embed a solid in the same way that is currently implemented in Basilisk
-
-## Proposed solution
-* We can create artifical solids by using "Stephane's Trick", which was used to [move a cylinder through a liquid](<http://basilisk.fr/sandbox/popinet/movingcylinder.c>)
-* The idea is to create another volume fraction (here we call it plate[]), which is 1 inside the plate and 0 outside of the plate
-* In order for the plate to act as a solid, we need to impose the kinematic condition on the velocity (that is the vertical velocity of the fluid needs to match the plate speed)
-
-## Goal
-Conduct simulations of axisymmetric droplet impact onto a moving plate, where the displacement of the plate is determined by the forces felt on it from the droplet. In particular, we wish to model the problem of a plate being suspended by a spring and a dashpot, in order to study how elastic and dissipative effects on the movement affect the dynamics of the droplet. 
-
-## Structure of repository
-* This repository is to document the progress we are making into studying impact onto moving plates. Each sub directory documents a different task to complete in order to solve the eventual problem of impact onto a plate-spring-dashpot system -->
+# Further questions
+If you get stuck at any point, then please do reach out via email, where my 
+address is given on my GitHub profile. Otherwise the Basilisk website has plenty
+of documentation and an active forum page that are always happy to help. Good luck!
