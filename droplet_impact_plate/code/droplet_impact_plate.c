@@ -1,7 +1,7 @@
-/* impact_acc.c
+/* droplet_impact_plate.c
     A Basilisk script to model the impact of a droplet of water impacting onto a
     moving plate. The domain is set to be in an accelerating frame with the 
-    plate, so an additional body force is added.
+    plate, so an additional body force is added. 
 */
 
 // Filtering for large viscosity ratios
@@ -22,7 +22,6 @@
 
 /* Computational constants derived from parameters */
 double MIN_CELL_SIZE; // Size of the smallest cell
-double DROP_REFINED_WIDTH; // Width of the refined area around the droplet
 double PLATE_REFINED_WIDTH; // Width of the refined area around the plate
 double DROP_CENTRE; // Initial centre of the droplet
 double IMPACT_TIME; // Theoretical time of impact
@@ -36,8 +35,8 @@ int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
-// Stores time the interface was outputted
-char interface_time_filename[80] = "interface_times.txt"; 
+char interface_time_filename[80] \
+    = "interface_times.txt"; // Stores the time the interface was outputted
 
 /* Force peak detection */
 double * filtered_forces; // Filtered forces of previous timesteps
@@ -61,8 +60,8 @@ FILE * fp_stats;
 char interp_stats_filename[80] = "interp_stats.txt";
 
 /* Contact angle variables */ 
-vector h[];  // Height function
-double theta0 = 90;  // Contact angle in degrees
+vector h[]; // Height function
+double theta0 = 90; // Contact angle in degrees
 
 /* Boundary conditions */
 // Conditions for entry from above
@@ -82,7 +81,8 @@ h.t[left] = contact_angle (theta0*pi/180.); // RC contact angle
 // Function for removing droplets away from a specific region
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit);
-        
+
+
 int main() {
 /* Main function to set up the simulation */
 
@@ -99,7 +99,6 @@ int main() {
 
     /* Derived constants */
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
-    DROP_REFINED_WIDTH = 0.04; // Refined region around droplet
     PLATE_REFINED_WIDTH \
         = PLATE_REFINE_NO * MIN_CELL_SIZE; // Refined region width around plate
     DROP_CENTRE = INITIAL_DROP_HEIGHT + DROP_RADIUS;
@@ -180,7 +179,7 @@ event refinement (i++) {
 event moving_plate (t += 1e-4) {
 /* Moves the plate as a function of the force on it */
 
-    /* Calculate the force on the plate by integrating using trapeze rule*/
+    /* Calculate the force on the plate by integrating using trapezoidal rule */
     current_force = 0.; // Initialise to be zero
 
     // Iterates over the solid boundary
@@ -202,7 +201,10 @@ event moving_plate (t += 1e-4) {
 
     /* Peak detection. We attempt to use a peak detection algorithm to check if 
     the current force value is as expected, or if it has peaked to a 
-    non-desirable value. */
+    non-desirable value. 
+    Details of the algorithm are found at:
+    https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data 
+    */
     
     // If the peak detect parameter is satisfied
     if (PEAK_DETECT) {
@@ -241,6 +243,7 @@ event moving_plate (t += 1e-4) {
                     force_term = filtered_forces[PEAK_LAG - 1];
                     new_filtered = force_term;
 
+                    // Output the force data
                     FILE * interp_stats_file = fopen(interp_stats_filename, "a");
                     fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
                         t, current_force, avgFilter, stdFilter, force_term);
@@ -249,21 +252,19 @@ event moving_plate (t += 1e-4) {
                     /* If current force deviates from the mean more than 
                     PEAK_THRESHOLD number of standard deviations, then take 
                     force term to be an influenced value */
-                    // if (current_force > avgFilter) {
-                    //     force_term = avgFilter + PEAK_THRESHOLD * stdFilter;
-                    // } else {
-                    //     force_term = avgFilter - PEAK_THRESHOLD * stdFilter;
-                    // }
+
                     force_term = avgFilter;
                      
                     new_filtered = PEAK_INFLUENCE * current_force \
                         + (1 - PEAK_INFLUENCE) * filtered_forces[PEAK_LAG - 1];
 
+                    // Output the force data
                     FILE * interp_stats_file = fopen(interp_stats_filename, "a");
                     fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
                         t, current_force, avgFilter, stdFilter, force_term);
                     fclose(interp_stats_file);
                 } else {
+                    /* Else current_force is kept */
                     force_term = current_force;
                     new_filtered = force_term;
                 }
@@ -283,15 +284,12 @@ event moving_plate (t += 1e-4) {
             previous_std = stdFilter;
 
             // Average
-            // fprintf(stderr, "t = %.4f, ", t);
             avgFilter = 0;
             #pragma omp for reduction(+:avgFilter)
             for (int j = 0; j < PEAK_LAG; j++) {
-                // fprintf(stderr, "f[%d] = %g, ", j, filtered_forces[j]);
                 avgFilter = avgFilter + filtered_forces[j];
             }
             avgFilter = avgFilter / ((double) PEAK_LAG);
-            // fprintf(stderr, "avg = %g\n", avgFilter);
 
             // Standard deviation
             stdFilter = 0;
@@ -311,7 +309,8 @@ event moving_plate (t += 1e-4) {
     // If before force delay time, we set the force term to be zero
     if (t < FORCE_DELAY_TIME) force_term = 0;
 
-    /* Solves the ODE for the updated plate position and acceleration */
+    /* Solves the ODE for the updated plate position and acceleration using 
+    a second-order explicit finite difference scheme */
     s_next = (DT * DT * force_term \
         + (2. * ALPHA - DT * DT * GAMMA) * s_current \
         - (ALPHA - DT * BETA / 2.) * s_previous) \
@@ -323,25 +322,25 @@ event moving_plate (t += 1e-4) {
     s_previous = s_current;
     s_current = s_next; 
 
-    /* OVERRIDE: CONSTANT ACCELERATION */
+    /* If CONST_ACC is set, then we override this and set the variables to their
+    pre-defined values */
     if (CONST_ACC) {
         if (t < IMPACT_TIME) {
             d2s_dt2 = 0.;
             ds_dt = 0.;
             s_current = 0.;
         } else {
-            d2s_dt2 = PLATE_ACC;
+            d2s_dt2 = PLATE_ACC; // PLATE_ACC is the pre-defined constant acc.
             ds_dt = d2s_dt2 * (t - IMPACT_TIME);
             s_current = 0.5 * d2s_dt2 * (t - IMPACT_TIME) * (t - IMPACT_TIME);
         }
     }
 
-    /* Updates velocity BC's */
+    /* Updates velocity boundary conditions */
     u.t[top] = dirichlet(ds_dt);
     u.n[left] = y < PLATE_WIDTH ? dirichlet(0.) : dirichlet(ds_dt);
 
     boundary ((scalar *){u}); // Redefine boundary conditions for u
-    // boundary((scalar *){p}); // Redefine pressure BC
 }
 
 
@@ -358,7 +357,8 @@ event acceleration (i++) {
 
 event small_droplet_removal (t += 1e-3) { 
 /* Removes any small droplets or bubbles that have formed, that are smaller than
- a specific size */
+ a specific size. Uses the remove_droplets_region code to leave the area near 
+ the point of impact alone in order to properly resolve the entrapped bubble */
 
     // Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
     // removed
@@ -368,7 +368,7 @@ event small_droplet_removal (t += 1e-3) {
     double ignore_region_x_limit = 0.02; 
     double ignore_region_y_limit = 0.02; 
     
-    // Counts the number of bubbles there are
+    // Counts the number of bubbles there are using the tag function
     scalar bubbles[];
     foreach() {
         bubbles[] = 1. - f[] > drop_thresh;
@@ -377,31 +377,32 @@ event small_droplet_removal (t += 1e-3) {
 
     // Determines if we are before or after the pinch-off time
     if (pinch_off_time == 0.) {
-        // The first time the bubble number is above 1, we define it to be the 
-        // pinch off time
+        /* The first time the bubble number is above 1, we define it to be the 
+        pinch off time */
         if (bubble_no > 1) {
             pinch_off_time = t;
         }
     } else if (t >= pinch_off_time + REMOVAL_DELAY) {
-        // If we are a certain time after the pinch-off time, remove drops and 
-        // bubbles below the specified minimum size
+        /* If we are a certain time after the pinch-off time, remove drops and 
+        bubbles below the specified minimum size */
 
+        // Set up RemoveDroplets struct
         struct RemoveDroplets remove_struct;
         remove_struct.f = f;
         remove_struct.minsize = drop_min_cell_width;
         remove_struct.threshold = drop_thresh;
         remove_struct.bubbles = false;
 
-        // Remove droplets
+        // Remove droplets outside of the specified region
         remove_droplets_region(remove_struct, ignore_region_x_limit, \
             ignore_region_y_limit);
 
-        // Remove bubbles
+        // Remove bubbles outside of the specified region
         remove_struct.bubbles = true;
         remove_droplets_region(remove_struct, ignore_region_x_limit, \
             ignore_region_y_limit);
 
-        // Completely removes bubble if specified
+        // Remove the entrapped bubble if specified
         if (REMOVE_ENTRAPMENT) {
             foreach(){ 
                 if (x < 0.01 && y < 2 * 0.05) {
@@ -415,6 +416,7 @@ event small_droplet_removal (t += 1e-3) {
 
 event output_plate (t += PLATE_OUTPUT_TIMESTEP) {
 /* Outputs data along the plate */
+
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         // Creates the file for outputting data along the plate
         char plate_output_filename[80];
@@ -451,7 +453,8 @@ event output_log (t += LOG_OUTPUT_TIMESTEP) {
         /* Outputs data to log file */
         fprintf(stderr, \
             "t = %.4f, F = %.6f, force_term = %.6f, avg = %.6f, std = %.6f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
-            t, current_force, force_term, previous_avg, previous_std, s_current, ds_dt, d2s_dt2);
+            t, current_force, force_term, previous_avg, previous_std, \
+            s_current, ds_dt, d2s_dt2);
     }
 }
 
@@ -491,82 +494,7 @@ event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 }
 
 
-// event movies (t += 1e-3) {
-// /* Produces movies using bview */ 
-//     if (MOVIES) {
-//         // Creates a string with the time to put on the plots
-//         char time_str[80];
-//         sprintf(time_str, "t = %g\n", t);
-
-//         /* Zoomed out view */
-//         // Set up bview box
-//         view (width = 1024, height = 1024, fov = 18.0, ty = -0.4, \
-//             quat = {0, 0, -0.707, 0.707});
-
-//         /* Movie of the volume fraction of the droplet */
-//         clear();
-//         draw_vof("f", lw = 2);
-//         squares("f", linear = true, spread = -1, linear = true, map = cool_warm); // RC - minor changes here and beyond
-//         mirror ({0,1}) {
-//             draw_vof("f", lw = 2);
-//             squares("f", linear = true, spread = -1, linear = true, map = cool_warm);
-//         }
-//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-//         save ("tracer.mp4");
-
-//         /* Movie of the vertical velocity */
-//         clear();
-//         draw_vof("f", lw = 2);
-//         squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
-//         mirror ({0,1}) {
-//             draw_vof("f", lw = 2);
-//             squares("u.x", linear = false, spread = -1, linear = true, map = cool_warm);
-//         }
-//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-//         save ("vertical_vel.mp4");
-
-
-//         /* Movie of the horizontal velocity */
-//         clear();
-//         draw_vof("f", lw = 2);
-//         squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
-//         mirror ({0,1}) {
-//             draw_vof("f", lw = 2);
-//             squares("u.y", linear = false, spread = -1, linear = true, map = cool_warm);
-//         }
-//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-//         save ("horizontal_vel.mp4");
-
-//         /* Movie of the pressure */
-//         clear();
-//         draw_vof("f", lw = 2);
-//         squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-//         mirror ({0,1}) {
-//             draw_vof("f", lw = 2);
-//             squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-//         }
-//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-//         save ("pressure.mp4");
-
-//         /* Zoomed in view of pressure around entrapped bubble */
-//         // Set up bview box
-//         view (width = 1024, height = 1024, fov = 5.0, ty = -0.1, \
-//             quat = {0, 0, -0.707, 0.707});
-
-//         clear();
-//         draw_vof("f", lw = 2);
-//         squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-//         mirror ({0,1}) {
-//             draw_vof("f", lw = 2);
-//             squares("p", linear = false, spread = -1, linear = true, map = cool_warm);
-//         }
-//         draw_string(time_str, pos=1, lc= { 0, 0, 0 }, lw=2);
-//         save ("zoomed_pressure.mp4");
-//     }
-// }
-
-
-event alt_movies (t += 1e-3) {
+event movies (t += 1e-3) {
 /* Produces movies using bview */ 
     if (MOVIES) {
         // Creates a string with the time to put on the plots
@@ -575,8 +503,6 @@ event alt_movies (t += 1e-3) {
 
         /* Zoomed out view */
         // Set up bview box
-        // view (width = 1024, height = 1024, fov = 18.0, ty = -0.475, tx = -0.475, \
-        //     quat = {0, 0, -0.707, 0.707});
         view (width = 1024, height = 1024, fov = 9, ty = -0.235, tx = -0.235, \
             quat = {0, 0, -0.707, 0.707});
 
@@ -590,8 +516,7 @@ event alt_movies (t += 1e-3) {
         save ("tracer.mp4");
 
         /* Pressure video, scaled by the stationary Wagner maximum */
-        // for (int pcoeff = 0; pcoeff <= 4; pcoeff++) {
-            int pcoeff = 3;
+        for (int pcoeff = 0; pcoeff <= 4; pcoeff++) {
             clear();
             mirror({0, 1}) {
                 draw_vof("f", lw = 2);
@@ -605,14 +530,11 @@ event alt_movies (t += 1e-3) {
             char pressure_vid_filename[80];
             sprintf(pressure_vid_filename, "pressure_%d.mp4", pcoeff);
             save (pressure_vid_filename);
-        // }
-
-        
+        }
 
         /* Velocity videos. Aim is for each velocity component and norm, produce multiple videos with
         different (fixed) colour maps */
-        
-        // for (int velmax = 1; velmax <= 3; velmax++) {
+        for (int velmax = 1; velmax <= 3; velmax++) {
             /* Movie of vertical velocity */
             int velmax = 2;
             clear();
@@ -638,12 +560,22 @@ event alt_movies (t += 1e-3) {
             char horizontal_vid_filename[80];
             sprintf(horizontal_vid_filename, "horizontal_vel_%d.mp4", velmax);
             save (horizontal_vid_filename);
-        // }
-
-
-        
+        }
     }
 }
+
+
+event logstats (t += 0.01) {
+/* Event to regularly output relevant statistics */
+
+    timing s = timer_timing (perf.gt, i, perf.tnc, NULL);
+ 
+    // i, timestep, no of cells, real time elapsed, cpu time
+    fprintf(fp_stats, "i: %i t: %g dt: %g #Cells: %ld Wall clock time (s): %g CPU time (s): %g \n", \
+        i, t, dt, grid->n, perf.t, s.cpu);
+    fflush(fp_stats);
+}
+
 
 event end (t = MAX_TIME) {
 /* Ends the simulation */ 
@@ -658,7 +590,8 @@ event end (t = MAX_TIME) {
     }
 }
 
-/* Alternative remove_droplets definitions */
+
+/* Alternative remove_droplets definition */
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit) {
     scalar d[], f = p.f;
@@ -690,14 +623,4 @@ void remove_droplets_region(struct RemoveDroplets p,\
             f[] = p.bubbles;
     }
     boundary ({f});
-}
-
-
-event logstats (t += 0.01) {
-
-    timing s = timer_timing (perf.gt, i, perf.tnc, NULL);
- 
-    // i, timestep, no of cells, real time elapsed, cpu time
-    fprintf(fp_stats, "i: %i t: %g dt: %g #Cells: %ld Wall clock time (s): %g CPU time (s): %g \n", i, t, dt, grid->n, perf.t, s.cpu);
-    fflush(fp_stats);
 }
