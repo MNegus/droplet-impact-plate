@@ -7,6 +7,15 @@
 *.deps
 *.tests
 
+# Make output files
+warn
+out
+pass
+*.err
+
+# Raw data directories
+raw_data
+
 # Nohup files
 nohup.out
 
@@ -17,4 +26,16 @@ nohup.out
 Figures/
 
 # MATLAB temporary save files
-*.m~ 
+*.m~
+
+# Ignore videos
+*.avi
+*.mp4
+
+# Ignore text, dat  and log files
+*.txt 
+log
+*.dat
+
+# Ignore gfs files
+*.gfs
