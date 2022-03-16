@@ -27,8 +27,8 @@ required, familiarity with Basilisk (at least up until the point you can run
 the [tutorial](<http://basilisk.fr/Tutorial>) is very useful. 
 
 ## Example run
-As an example, the code in the example_run directory is immediately ready to be
-run. In the command line, enter the directory example_run/code and run the command
+As an example, the code in the `example_run` directory is immediately ready to be
+run. In the command line, enter the directory `example_run/code` and run the command
 ```shell
 ./run_simulation droplet_impact_plate 
 ```
@@ -37,17 +37,17 @@ After a bunch of text initialising the Makefiles, you should eventually see
 [droplet_impact_plate.tst]
 ```
 which indicates the code is running! This example will run the simulation for 
-a maximum refinement level of 6, with plate parameters ALPHA = 2, BETA = 0 and 
-GAMMA = 500 up until t = 0.8. During run-time, the output will be in a directory
-called droplet_impact_plate, and if you want to check how things are going then
-open the file named log, which will output various quantities for t += 1e-4. 
+a maximum refinement level of 6, with plate parameters `ALPHA = 2`, `BETA = 0` and 
+`GAMMA = 500` up until `t = 0.8`. During run-time, the output will be in a directory
+called `droplet_impact_plate`, and if you want to check how things are going then
+open the file named `log`, which will output various quantities for `t += 1e-4`. 
 
 Calling the above command will run the code on one core only, which is very 
-slow! To run the code on N cores, you need to run
+slow! To run the code on `N` cores, you need to run
 ```shell
 ./run_simulation droplet_impact_plate N
 ```
-It is recommended to make N a power of 2 (e.g. 2, 4, 8, 16, ...) for optimal
+It is recommended to make `N` a power of 2 (e.g. 2, 4, 8, 16, ...) for optimal
 load balancing. The time it takes to run will depend on your computational setup,
 but for 4 cores you can expect the run to take around 20 minutes. Because of this,
 it is wise to make the simulation run in the background, to prevent losing your
@@ -55,8 +55,8 @@ progress if you close the terminal window. To do this, run the command
 ```shell
 nohup ./run_simulation droplet_impact_plate N &
 ```
-Here the command nohup sends what would have been outputted to the command line 
-into a file called nohup.out, and the & sign suppresses the terminal output. This
+Here the command `nohup` sends what would have been outputted to the command line 
+into a file called `nohup.out`, and the & sign suppresses the terminal output. This
 means that the code is running in the background and you can safely close all 
 terminal windows. When you run this command, you'll get a command line message 
 that looks something like
@@ -72,44 +72,44 @@ kill -s TERM 22791
 where of course replace the 22791 with the PID you were given.
 
 At the end of the simulation, all of the output will be moved into a directory
-called raw_data in the example_run directory, so the contents of example_run are
-the code and the raw_data directories. We'll discuss what to do with this data
+called `raw_data` in the example_run directory, so the contents of example_run are
+the code and the `raw_data` directories. We'll discuss what to do with this data
 in the following sections. 
 
 ## Specifying your own parameters
-The example code runs the code with a relatively coarse grid (with MAXLEVEL = 6,
-while the results in the paper have MAXLEVEL = 13). In order to change parameters 
-such as the maximum refinement level, you need to edit the values in the parameters.h
-file found in the utility_scripts directory. This script contains all of the
+The example code runs the code with a relatively coarse grid (with `MAXLEVEL = 6`,
+while the results in the paper have `MAXLEVEL = 13`). In order to change parameters 
+such as the maximum refinement level, you need to edit the values in the `parameters.h`
+file found in the `utility_scripts` directory. This script contains all of the
 parameters used in the code, both physical parameters like the properties of the
 plate, and computational parameters like the refinement level.
 
 In its current form, the parameters script is set up with the values that were
 used to produce the results in the paper. In terms of computational options such
 as the refinement level, things should be kept the same. However note that with
-MAXLEVEL = 13, the code takes about 8 hours to run on 8 cores, so this may want
+`MAXLEVEL = 13`, the code takes about 8 hours to run on 8 cores, so this may want
 to be reduced while getting to grips with the code. 
 
-The main parameters that you'd want to change are the plate parameters ALPHA, 
-BETA and GAMMA, as these change the properties of the plate as seen in the figures
+The main parameters that you'd want to change are the plate parameters `ALPHA`, 
+`BETA` and `GAMMA`, as these change the properties of the plate as seen in the figures
 in the paper. As well as these, it is also important to run the control case, where
-the plate is held stationary. In this case, you'd set the CONST_ACC flag to 1,
+the plate is held stationary. In this case, you'd set the `CONST_ACC` flag to 1,
 which will set the acceleration of the plate to the constant value given by 
-PLATE_ACC. If PLATE_ACC is 0 (as it is by default), then the plate will be 
+`PLATE_ACC`. If `PLATE_ACC = 0` (as it is by default), then the plate will be 
 stationary and this will provide the parameters for the test case.
 
-Apart from these, feel free to look at the other parameters listed in parameters.h, 
-and find out how they're used in the droplet_impact_plate.c. 
+Apart from these, feel free to look at the other parameters listed in `parameters.h`, 
+and find out how they're used in the `droplet_impact_plate.c` script. 
 
-Once you've set the parameters as desired in parameters.h, you'd want to run the
+Once you've set the parameters as desired in `parameters.h`, you'd want to run the
 code! First, you'll need to copy the scripts into a different directory on your
 system (preferably one with plenty of disk space). Say you want to run your
-code in a folder called myRun inside a parent directory called parentDir; then 
-enter the utility_scripts directory and run the command
+code in a folder called `myRun` inside a parent directory called `parentDir`; then 
+enter the `utility_scripts` directory and run the command
 ```shell
 ./code_copy.sh ../droplet_impact_plate parentDir myRun
 ```
-This will create a directory called myRun inside parentDir, and inside myRun
+This will create a directory called `myRun` inside `parentDir`, and inside `myRun`
 there will be a sub-directory called code containing the scripts: `droplet_impact_plate.c`, 
 `Makefile`, `parameters.h` and `run_simulation.sh`. This is the exact setup that
 was in your original `example_run/code` directory. This script is ready to be
