@@ -22,7 +22,59 @@ toolset can be used.
 
 
 # Tutorial
+Below we give a brief tutorial as to how to run a simulation. Although not strictly
+required, familiarity with Basilisk (at least up until the point you can run
+the [tutorial](<http://basilisk.fr/Tutorial>) is very useful. 
+
 ## Example run
+As an example, the code in the example_run directory is immediately ready to be
+run. In the command line, enter the directory example_run/code and run the command
+```shell
+./run_simulation droplet_impact_plate 
+```
+After a bunch of text initialising the Makefiles, you should eventually see
+```shell
+[droplet_impact_plate.tst]
+```
+which indicates the code is running! This example will run the simulation for 
+a maximum refinement level of 6, with plate parameters ALPHA = 2, BETA = 0 and 
+GAMMA = 500 up until t = 0.8. During run-time, the output will be in a directory
+called droplet_impact_plate, and if you want to check how things are going then
+open the file named log, which will output various quantities for t += 1e-4. 
+
+Calling the above command will run the code on one core only, which is very 
+slow! To run the code on N cores, you need to run
+```shell
+./run_simulation droplet_impact_plate N
+```
+It is recommended to make N a power of 2 (e.g. 2, 4, 8, 16, ...) for optimal
+load balancing. The time it takes to run will depend on your computational setup,
+but for 4 cores you can expect the run to take around 20 minutes. Because of this,
+it is wise to make the simulation run in the background, to prevent losing your
+progress if you close the terminal window. To do this, run the command
+```shell
+nohup ./run_simulation droplet_impact_plate N &
+```
+Here the command nohup sends what would have been outputted to the command line 
+into a file called nohup.out, and the & sign suppresses the terminal output. This
+means that the code is running in the background and you can safely close all 
+terminal windows. When you run this command, you'll get a command line message 
+that looks something like
+```shell
+[1] 22791
+nohup: ignoring input and appending output to 'nohup.out'    
+```
+In this case, the PID of the process is 22791. It is worth noting this, as if you
+wish to end the process early, you'll need to use the command
+```shell
+kill -s TERM 22791   
+```
+where of course replace the 22791 with the PID you were given.
+
+At the end of the simulation, all of the output will be moved into a directory
+called raw_data in the example_run directory, so the contents of example_run are
+the code and the raw_data directories. We'll discuss what to do with this data
+in the following sections. 
 
 ## Specifying your own parameters
 
