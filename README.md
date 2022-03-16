@@ -137,13 +137,13 @@ files are left in the `raw_data` directory. Here we detail what these files are:
 * **log**  
 The log file outputs the relevant global quantities for `t += 1e-4`. Specifically,
 these are:
-- `F`: The unfiltered force on the plate at time `t`
-- `force_term`: The force term after filtering
-- `avg`: The average force over the last `PEAK_LAG` timesteps
-- `std`: The standard deviation of the force over the last `PEAK_LAG` timesteps
-- `s`: The plate position
-- `ds_dt`: The first time derivative of the plate position
-- `d2s_dt2`: The second time derivative of the plate position
+    - `F`: The unfiltered force on the plate at time `t`
+    - `force_term`: The force term after filtering
+    - `avg`: The average force over the last `PEAK_LAG` timesteps
+    - `std`: The standard deviation of the force over the last `PEAK_LAG` timesteps
+    - `s`: The plate position
+    - `ds_dt`: The first time derivative of the plate position
+    - `d2s_dt2`: The second time derivative of the plate position
 The log file is in a readable form, but will need to be cleaned to use in post-processing
 (see later in this section).
 * **mp4 files**    
