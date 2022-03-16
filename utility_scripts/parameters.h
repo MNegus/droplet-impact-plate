@@ -40,7 +40,7 @@ const double BOX_WIDTH = 3.0; // Width of the computational box
 const double FORCE_DELAY_TIME = 0.01; // Delay time before force is applied on plate
 // Refinement options
 const int MINLEVEL = 4; // Minimum refinement level 
-const int MAXLEVEL = 6; // Maximum refinement level
+const int MAXLEVEL = 13; // Maximum refinement level
 const int PLATE_REFINE_NO = 4; // Number of max refinement cells above plate
 const double DROP_REFINED_WIDTH = 0.04; // width of refined region around droplet
 // Output options

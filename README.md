@@ -77,6 +77,47 @@ the code and the raw_data directories. We'll discuss what to do with this data
 in the following sections. 
 
 ## Specifying your own parameters
+The example code runs the code with a relatively coarse grid (with MAXLEVEL = 6,
+while the results in the paper have MAXLEVEL = 13). In order to change parameters 
+such as the maximum refinement level, you need to edit the values in the parameters.h
+file found in the utility_scripts directory. This script contains all of the
+parameters used in the code, both physical parameters like the properties of the
+plate, and computational parameters like the refinement level.
+
+In its current form, the parameters script is set up with the values that were
+used to produce the results in the paper. In terms of computational options such
+as the refinement level, things should be kept the same. However note that with
+MAXLEVEL = 13, the code takes about 8 hours to run on 8 cores, so this may want
+to be reduced while getting to grips with the code. 
+
+The main parameters that you'd want to change are the plate parameters ALPHA, 
+BETA and GAMMA, as these change the properties of the plate as seen in the figures
+in the paper. As well as these, it is also important to run the control case, where
+the plate is held stationary. In this case, you'd set the CONST_ACC flag to 1,
+which will set the acceleration of the plate to the constant value given by 
+PLATE_ACC. If PLATE_ACC is 0 (as it is by default), then the plate will be 
+stationary and this will provide the parameters for the test case.
+
+Apart from these, feel free to look at the other parameters listed in parameters.h, 
+and find out how they're used in the droplet_impact_plate.c. 
+
+Once you've set the parameters as desired in parameters.h, you'd want to run the
+code! First, you'll need to copy the scripts into a different directory on your
+system (preferably one with plenty of disk space). Say you want to run your
+code in a folder called myRun inside a parent directory called parentDir; then 
+enter the utility_scripts directory and run the command
+```shell
+./code_copy.sh ../droplet_impact_plate parentDir myRun
+```
+This will create a directory called myRun inside parentDir, and inside myRun
+there will be a sub-directory called code containing the scripts: `droplet_impact_plate.c`, 
+`Makefile`, `parameters.h` and `run_simulation.sh`. This is the exact setup that
+was in your original `example_run/code` directory. This script is ready to be
+run in the exact way you did for the example, and running 
+```shell
+nohup ./run_simulation droplet_impact_plate N &
+```
+should kick off the simulation! 
 
 ## Understanding the data output
 
