@@ -5,13 +5,14 @@ Most should be left as they are, but some can be edited to change either the
 computational or physical options
 */
 
-/* Fluid properties for a droplet of 1mm radius with initial velocity 5 m/s
-in air */
-const double RHO_R = 0.00120; // Density ratio
-const double MU_R = 0.0183; // Viscosity ratio
-const double REYNOLDS = 4990; // Reynolds number
-const double WEBER = 342; // Weber number
-const double FR = 50.5; // Froude number
+/* Dimensional fluid properties */
+const double R = 1.0e-3; // Radius of droplet (metres)
+const double V = 5.0; // Velocity of droplet (metres per second)
+const double RHO_L = 998.0; // Density of liquid (kilograms per metre cubed)
+const double RHO_G = 1.23; // Density of gas (kilograms per metre cubed)
+const double MU_L = 1.0e-3; // Viscosity of liquid (Pascal seconds)
+const double MU_G = 1.81e-5; // Viscosity of gas (Pascal seconds)
+const double SIGMA = 7.29e-2; // Surface tension (Newtons per metre)
 
 /* Dimensionless droplet definition */
 const double DROP_VEL = -1.0; // Initial velocity of the droplet 
