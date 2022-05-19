@@ -35,7 +35,7 @@ computational time will need to be adjusted by this amount.
 # Tutorial
 Below we give a brief tutorial as to how to run a simulation. Although not strictly
 required, familiarity with Basilisk (at least up until the point you can run
-the [tutorial](<http://basilisk.fr/Tutorial>) is very useful. 
+the [tutorial](<http://basilisk.fr/Tutorial>)) is very useful. 
 
 ## Example run
 As an example, the code in the `example_run` directory is immediately ready to be
@@ -67,7 +67,7 @@ progress if you close the terminal window. To do this, run the command
 nohup ./run_simulation droplet_impact_plate N &
 ```
 Here the command `nohup` sends what would have been outputted to the command line 
-into a file called `nohup.out`, and the & sign suppresses the terminal output. This
+into a file called `nohup.out`, and the `&` sign suppresses the terminal output. This
 means that the code is running in the background and you can safely close all 
 terminal windows. When you run this command, you'll get a command line message 
 that looks something like
@@ -75,10 +75,10 @@ that looks something like
 [1] 22791
 nohup: ignoring input and appending output to 'nohup.out'    
 ```
-In this case, the PID of the process is 22791. It is worth noting this, as if you
+In this case, the PID of the process is 22791. It is worth noting this down, as if you
 wish to end the process early, you'll need to use the command
 ```shell
-kill -s TERM 22791   
+kill 22791   
 ```
 where of course replace the 22791 with the PID you were given.
 
@@ -128,7 +128,7 @@ run in the exact way you did for the example, and running
 ```shell
 nohup ./run_simulation droplet_impact_plate N &
 ```
-should kick off the simulation! 
+inside the `code` directory should kick off the simulation! 
 
 ## Understanding the data output
 The simulations produce a lot of data output, and on their own they can be
@@ -147,24 +147,24 @@ these are:
 The log file is in a readable form, but will need to be cleaned to use in post-processing
 (see later in this section).
 * **mp4 files**    
-Simply, if you've chosen to output movies, then movies of the process will be 
+If you've chosen to output movies, then movies of the process will be 
 produced in a bunch of mp4 files. These are the easiest ways to visualise the
 simulation.
 * **gfs files**  
-These files with a .gfs extension are files that can be opened using gfsview (if
+The files with a `.gfs` extension are files that can be opened using gfsview (if
 you have installed it). I.e. to open the `gfs_output_1.gfs`, call `gfsview2D gfs_output_1.gfs`. 
 See the Gerris website for more details on how to work gfsview. 
 * **interface_N.txt**  
 At regular intervals, the interface of the droplet is outputted into the
 `interface_N.txt` files, where N is incrememented. These files contain the start
 and end points coordinates of each line segment along the interface. This can
-either be used to visualise the interface in a ``smart" way by drawing the line 
+either be used to visualise the interface in a "smart" way by drawing the line 
 segments, or just producing a scatter plot out of all of the points.
 * **plate_output_N.txt**  
 At regular time intervals, these files output the pressure `p` and viscous stress
 `strss` along the plate at x = 0 (i.e. z) for various y (i.e. r). In its
-raw form these are in a readable format, and after cleaning these can be
-used to visualise the evolution pressure and viscous stress in post-processing/
+raw form these are in a human-readable format, and after cleaning these can be
+used to visualise the evolution pressure and viscous stress in post-processing.
 
 
 ### Data cleaning
