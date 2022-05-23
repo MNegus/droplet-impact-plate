@@ -5,6 +5,9 @@ Most should be left as they are, but some can be edited to change either the
 computational or physical options
 */
 
+/* Axisymmetric option: Set to 0 for 2D, and 1 for axisymmetric */
+#define AXISYMMETRIC 0
+
 /* Dimensional fluid properties */
 const double R = 1.0e-3; // Radius of droplet (metres)
 const double V = 5.0; // Velocity of droplet (metres per second)
