@@ -11,7 +11,6 @@
 #define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
 
 #include "parameters.h" // Includes all defined parameters
-#include "axi.h" // Axisymmetric coordinates
 #include "navier-stokes/centered.h" // To solve the Navier-Stokes
 #include "two-phase.h" // Implements two-phase flow
 #include "view.h" // Creating movies using bview
@@ -19,6 +18,10 @@
 #include "tag.h" // For removing small droplets
 #include "contact.h" // For imposing contact angle on the surface
 #include <omp.h> // For openMP parallel
+
+#if AXISYMMETRIC
+#include "axi.h" // Axisymmetric coordinates
+#endif
 
 /* Physical constants */
 double REYNOLDS; // Reynolds number of liquid
@@ -85,6 +88,14 @@ u.n[left] = dirichlet(0.); // No flow through surface
 u.t[left] = dirichlet(0.); // No slip at surface
 h.t[left] = contact_angle (theta0*pi/180.); // RC contact angle
 
+// Conditions on line of symmetry
+#if !(AXISYMMETRIC)
+u.n[bottom] = dirichlet(0.);
+#endif
+
+// Function for doing peak detection
+void peak_detect(double current_force);
+
 // Function for removing droplets away from a specific region
 void remove_droplets_region(struct RemoveDroplets p,\
         double ignore_region_x_limit, double ignore_region_y_limit);
@@ -120,7 +131,11 @@ int main() {
 
     /* Maximum time is shortly after Wagner theory would predict the turnover 
     point reaches the radius of the droplet */
+    #if AXISYMMETRIC
     double wagner_max_time = 2.0 * (IMPACT_TIME + 1. / 3.);
+    #else
+    double wagner_max_time = 2.0 * (IMPACT_TIME + 1. / 4.);
+    #endif
     MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
 
     /* Allocates memory for the force and times arrays */
@@ -206,115 +221,28 @@ event moving_plate (t += 1e-4) {
             double viscous_stress = \
                 - 2 * avg_mu * (u.x[1, 0] - u.x[]) / Delta;
 
-            // Adds the contribution to the force using trapeze rule
+            // Adds the contribution to the force using trapeze rule, depending 
+            // on if we are in the axisymmetric setting or not
+            #if AXISYMMETRIC
             current_force += y * Delta * (p[] + viscous_stress);
+            #else
+            current_force += Delta * (p[] + viscous_stress);
+            #endif
         }
     }
 
-    current_force = 2 * pi * current_force; // Integrates about the angular part
+    // Integrates about angular part in axisymmetric, or doubles in 2D to take 
+    // into account the other side of the plate
 
-    /* Peak detection. We attempt to use a peak detection algorithm to check if 
-    the current force value is as expected, or if it has peaked to a 
-    non-desirable value. 
-    Details of the algorithm are found at:
-    https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data 
-    */
+    #if AXISYMMETRIC
+    current_force = 2 * pi * current_force; 
+    #else
+    current_force = 2 * current_force; 
+    #endif
     
     // If the peak detect parameter is satisfied
     if (PEAK_DETECT) {
-
-        /* For the first PEAK_LAG timesteps, we populate the filtered force
-            array with the current values of the force. The forcing term is set
-            to the current force */ 
-        if (peak_no < PEAK_LAG) {
-
-            // Populate array
-            filtered_forces[peak_no] = current_force;
-
-            // Specify forcing term for ODE
-            force_term = current_force;
-
-            peak_no++;
-
-        } else {
-            double new_filtered; // New filtered value of force
-
-            /* Before the specified delay, no peak detection happens. This is to
-            ensure the problem has regularised */
-            if (t < PEAK_DELAY)  {
-                force_term = current_force;
-                new_filtered = force_term;
-            /* Else, we initiate the peak detection algorithm */
-            } else {
-                double previous_force = filtered_forces[PEAK_LAG - 1];
-                double diff_from_previous \
-                    = (current_force - previous_force) / previous_force;
-
-                if ((current_force <= 0) || fabs(diff_from_previous) > 0.25) {
-                    /* If current force is less than or equal to zero, or 
-                    differs from the previous force by more than 25%, then 
-                    completely ignore */
-                    force_term = filtered_forces[PEAK_LAG - 1];
-                    new_filtered = force_term;
-
-                    // Output the force data
-                    FILE * interp_stats_file = fopen(interp_stats_filename, "a");
-                    fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
-                        t, current_force, avgFilter, stdFilter, force_term);
-                    fclose(interp_stats_file);
-                } else if (fabs(current_force - avgFilter) > PEAK_THRESHOLD * stdFilter) {
-                    /* If current force deviates from the mean more than 
-                    PEAK_THRESHOLD number of standard deviations, then take 
-                    force term to be an influenced value */
-
-                    force_term = avgFilter;
-                     
-                    new_filtered = PEAK_INFLUENCE * current_force \
-                        + (1 - PEAK_INFLUENCE) * filtered_forces[PEAK_LAG - 1];
-
-                    // Output the force data
-                    FILE * interp_stats_file = fopen(interp_stats_filename, "a");
-                    fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
-                        t, current_force, avgFilter, stdFilter, force_term);
-                    fclose(interp_stats_file);
-                } else {
-                    /* Else current_force is kept */
-                    force_term = current_force;
-                    new_filtered = force_term;
-                }
-            }
-
-            // Re-populate filtered forces array
-            #pragma omp critical
-            for (int j = 0; j < PEAK_LAG - 1; j++) {
-                filtered_forces[j] = filtered_forces[j + 1];
-            }
-            filtered_forces[PEAK_LAG - 1] = new_filtered;
-        }
-
-        // Update average and standard deviation of filtered forces
-        if (peak_no >= PEAK_LAG - 1) {
-            previous_avg = avgFilter;
-            previous_std = stdFilter;
-
-            // Average
-            avgFilter = 0;
-            #pragma omp for reduction(+:avgFilter)
-            for (int j = 0; j < PEAK_LAG; j++) {
-                avgFilter = avgFilter + filtered_forces[j];
-            }
-            avgFilter = avgFilter / ((double) PEAK_LAG);
-
-            // Standard deviation
-            stdFilter = 0;
-            #pragma omp for reduction(+:stdFilter)
-            for (int j = 0; j < PEAK_LAG; j++) {
-                stdFilter += (filtered_forces[j] - avgFilter) \
-                    * (filtered_forces[j] - avgFilter);
-            }
-            stdFilter = sqrt(stdFilter / ((double) PEAK_LAG));
-        }
-        
+        peak_detect(current_force);
     } else {
         // Without peak detect, we set the force term to the current force
         force_term = current_force;
@@ -418,7 +346,7 @@ event small_droplet_removal (t += 1e-3) {
 
         // Remove the entrapped bubble if specified
         if (REMOVE_ENTRAPMENT) {
-            foreach(){ 
+            foreach() { 
                 if (x < 0.01 && y < 2 * 0.05) {
                     f[] = 1.;
                 }
@@ -601,6 +529,108 @@ event end (t = MAX_TIME) {
 
     if (PEAK_DETECT) {
         free(filtered_forces);
+    }
+}
+
+/* Peak detect algorithm */
+void peak_detect(double current_force) {
+    /* Peak detection. We attempt to use a peak detection algorithm to check if 
+    the current force value is as expected, or if it has peaked to a 
+    non-desirable value. 
+    Details of the algorithm are found at:
+    https://stackoverflow.com/questions/22583391/peak-signal-detection-in-realtime-timeseries-data 
+    */
+   
+    /* For the first PEAK_LAG timesteps, we populate the filtered force
+        array with the current values of the force. The forcing term is set
+        to the current force */ 
+    if (peak_no < PEAK_LAG) {
+
+        // Populate array
+        filtered_forces[peak_no] = current_force;
+
+        // Specify forcing term for ODE
+        force_term = current_force;
+
+        peak_no++;
+
+    } else {
+        double new_filtered; // New filtered value of force
+
+        /* Before the specified delay, no peak detection happens. This is to
+        ensure the problem has regularised */
+        if (t < PEAK_DELAY)  {
+            force_term = current_force;
+            new_filtered = force_term;
+        /* Else, we initiate the peak detection algorithm */
+        } else {
+            double previous_force = filtered_forces[PEAK_LAG - 1];
+            double diff_from_previous \
+                = (current_force - previous_force) / previous_force;
+
+            if ((current_force <= 0) || fabs(diff_from_previous) > 0.25) {
+                /* If current force is less than or equal to zero, or 
+                differs from the previous force by more than 25%, then 
+                completely ignore */
+                force_term = filtered_forces[PEAK_LAG - 1];
+                new_filtered = force_term;
+
+                // Output the force data
+                FILE * interp_stats_file = fopen(interp_stats_filename, "a");
+                fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
+                    t, current_force, avgFilter, stdFilter, force_term);
+                fclose(interp_stats_file);
+            } else if (fabs(current_force - avgFilter) > PEAK_THRESHOLD * stdFilter) {
+                /* If current force deviates from the mean more than 
+                PEAK_THRESHOLD number of standard deviations, then take 
+                force term to be an influenced value */
+
+                force_term = avgFilter;
+                    
+                new_filtered = PEAK_INFLUENCE * current_force \
+                    + (1 - PEAK_INFLUENCE) * filtered_forces[PEAK_LAG - 1];
+
+                // Output the force data
+                FILE * interp_stats_file = fopen(interp_stats_filename, "a");
+                fprintf(interp_stats_file, "t = %g, F = %g, avgFilter = %g, stdFilter = %g, force_term = %g\n", \
+                    t, current_force, avgFilter, stdFilter, force_term);
+                fclose(interp_stats_file);
+            } else {
+                /* Else current_force is kept */
+                force_term = current_force;
+                new_filtered = force_term;
+            }
+        }
+
+        // Re-populate filtered forces array
+        #pragma omp critical
+        for (int j = 0; j < PEAK_LAG - 1; j++) {
+            filtered_forces[j] = filtered_forces[j + 1];
+        }
+        filtered_forces[PEAK_LAG - 1] = new_filtered;
+    }
+
+    // Update average and standard deviation of filtered forces
+    if (peak_no >= PEAK_LAG - 1) {
+        previous_avg = avgFilter;
+        previous_std = stdFilter;
+
+        // Average
+        avgFilter = 0;
+        #pragma omp for reduction(+:avgFilter)
+        for (int j = 0; j < PEAK_LAG; j++) {
+            avgFilter = avgFilter + filtered_forces[j];
+        }
+        avgFilter = avgFilter / ((double) PEAK_LAG);
+
+        // Standard deviation
+        stdFilter = 0;
+        #pragma omp for reduction(+:stdFilter)
+        for (int j = 0; j < PEAK_LAG; j++) {
+            stdFilter += (filtered_forces[j] - avgFilter) \
+                * (filtered_forces[j] - avgFilter);
+        }
+        stdFilter = sqrt(stdFilter / ((double) PEAK_LAG));
     }
 }
 
