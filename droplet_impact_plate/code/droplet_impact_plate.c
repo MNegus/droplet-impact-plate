@@ -128,8 +128,9 @@ int main() {
 
     /* Derived constants */
     MIN_CELL_SIZE = BOX_WIDTH / pow(2, MAXLEVEL); // Size of the smallest cell
-    PLATE_REFINED_WIDTH \
-        = PLATE_REFINE_NO * MIN_CELL_SIZE; // Refined region width around plate
+    // PLATE_REFINED_WIDTH \
+    //     = PLATE_REFINE_NO * MIN_CELL_SIZE; // Refined region width around plate
+    PLATE_REFINED_WIDTH = 0.01;
     DROP_CENTRE = INITIAL_DROP_HEIGHT + DROP_RADIUS;
     IMPACT_TIME = INITIAL_DROP_HEIGHT / (-DROP_VEL);
 
@@ -140,7 +141,8 @@ int main() {
     #else
     double wagner_max_time = 2.0 * (IMPACT_TIME + 1. / 4.);
     #endif
-    MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
+    // MAX_TIME = min(HARD_MAX_TIME, wagner_max_time);
+    MAX_TIME = HARD_MAX_TIME;
 
     /* Allocates memory for the force and times arrays */
     if (PEAK_DETECT) {
