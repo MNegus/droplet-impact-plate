@@ -45,6 +45,7 @@ int plate_output_no = 1; // Records how many plate data files there have been
 int interface_output_no = 1; // Records how many interface files there have been
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
+double bubble_area = 0.; // Area of entrapped bubble
 char interface_time_filename[80] \
     = "interface_times.txt"; // Stores the time the interface was outputted
 
@@ -72,6 +73,9 @@ char interp_stats_filename[80] = "interp_stats.txt";
 /* Contact angle variables */ 
 vector h[]; // Height function
 double theta0 = 90; // Contact angle in degrees
+
+/* Bubble counting */
+scalar bubbles[]; // Tag field for bubbles
 
 /* Boundary conditions */
 // Conditions for entry from above
@@ -311,7 +315,6 @@ event small_droplet_removal (t += 1e-3) {
     double ignore_region_y_limit = 0.02; 
     
     // Counts the number of bubbles there are using the tag function
-    scalar bubbles[];
     foreach() {
         bubbles[] = 1. - f[] > drop_thresh;
     }
@@ -324,35 +327,59 @@ event small_droplet_removal (t += 1e-3) {
         if (bubble_no > 1) {
             pinch_off_time = t;
         }
-    } else if (t >= pinch_off_time + REMOVAL_DELAY) {
-        /* If we are a certain time after the pinch-off time, remove drops and 
-        bubbles below the specified minimum size */
+    } else {
+        /* After the pinch off time, determine area of the entrapped bubble */
+        // Determine the tag of the entrapped bubble by finding the tag of the 
+        // cell 
+        int entrap_idx;
+        foreach_boundary(left) {
+            if (y < MIN_CELL_SIZE) {
+                entrap_idx = bubbles[];
+                break;
+            }
+        }
 
-        // Set up RemoveDroplets struct
-        struct RemoveDroplets remove_struct;
-        remove_struct.f = f;
-        remove_struct.minsize = drop_min_cell_width;
-        remove_struct.threshold = drop_thresh;
-        remove_struct.bubbles = false;
+        // Determine the area of the tagged droplet
+        bubble_area = 0.;
+        foreach(reduction(+:bubble_area)) {
+            if (bubbles[] == entrap_idx) {
+                bubble_area += (1. - f[]) * Delta * Delta;
+            }
+        }
 
-        // Remove droplets outside of the specified region
-        remove_droplets_region(remove_struct, ignore_region_x_limit, \
-            ignore_region_y_limit);
+        /* After the removal delay, remove drops and bubbles as necessary */    
+        if (t >= pinch_off_time + REMOVAL_DELAY) {
+            // Set up RemoveDroplets struct
+            struct RemoveDroplets remove_struct;
+            remove_struct.f = f;
+            remove_struct.minsize = drop_min_cell_width;
+            remove_struct.threshold = drop_thresh;
+            remove_struct.bubbles = false;
 
-        // Remove bubbles outside of the specified region
-        remove_struct.bubbles = true;
-        remove_droplets_region(remove_struct, ignore_region_x_limit, \
-            ignore_region_y_limit);
+            // Remove droplets outside of the specified region
+            remove_droplets_region(remove_struct, ignore_region_x_limit, \
+                ignore_region_y_limit);
 
-        // Remove the entrapped bubble if specified
-        if (REMOVE_ENTRAPMENT) {
+            // Remove bubbles outside of the specified region
+            remove_struct.bubbles = true;
+            remove_droplets_region(remove_struct, ignore_region_x_limit, \
+                ignore_region_y_limit);
+
+            // Remove the entrapped bubble if specified
+            if (REMOVE_ENTRAPMENT) {
+                foreach() { 
             foreach() { 
-                if (x < 0.01 && y < 2 * 0.05) {
-                    f[] = 1.;
+                foreach() { 
+            foreach() { 
+                foreach() { 
+                    if (x < 0.01 && y < 2 * 0.05) {
+                        f[] = 1.;
+                    }
                 }
             }
         }
     }
+        
 }
 
 
@@ -394,9 +421,9 @@ event output_log (t += LOG_OUTPUT_TIMESTEP) {
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
         /* Outputs data to log file */
         fprintf(stderr, \
-            "t = %.4f, F = %.6f, force_term = %.6f, avg = %.6f, std = %.6f, s = %g, ds_dt = %g, d2s_dt2 = %g\n", \
+            "t = %.4f, F = %.6f, force_term = %.6f, avg = %.6f, std = %.6f, s = %g, ds_dt = %g, d2s_dt2 = %g, bubble_area = %.7f\n", \
             t, current_force, force_term, previous_avg, previous_std, \
-            s_current, ds_dt, d2s_dt2);
+            s_current, ds_dt, d2s_dt2, bubble_area);
     }
 }
 
