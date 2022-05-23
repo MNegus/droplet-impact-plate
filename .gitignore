@@ -16,8 +16,8 @@ pass
 # Raw data directories
 raw_data
 
-# Nohup files
-nohup.out
+# Out files
+*.out
 
 # VSCode files
 .vscode
