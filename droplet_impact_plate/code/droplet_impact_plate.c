@@ -7,7 +7,7 @@
 // Filtering for large viscosity ratios
 #define FILTERED
 
-// Definition of viscosity for a value of f
+// Filtered viscosity field
 #define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
 
 #include "parameters.h" // Includes all defined parameters
@@ -313,8 +313,8 @@ event small_droplet_removal (t += 1e-3) {
     int drop_min_cell_width = 16;
 
     // Region to ignore
-    double ignore_region_x_limit = 0.02; 
-    double ignore_region_y_limit = 0.02; 
+    double ignore_region_x_limit = 0.05; 
+    double ignore_region_y_limit = 0.05; 
     
     // Counts the number of bubbles there are using the tag function
     foreach() {
@@ -369,10 +369,6 @@ event small_droplet_removal (t += 1e-3) {
 
             // Remove the entrapped bubble if specified
             if (REMOVE_ENTRAPMENT) {
-                foreach() { 
-            foreach() { 
-                foreach() { 
-            foreach() { 
                 foreach() { 
                     if (x < 0.01 && y < 2 * 0.05) {
                         f[] = 1.;
