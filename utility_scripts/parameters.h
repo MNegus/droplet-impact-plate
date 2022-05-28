@@ -23,7 +23,7 @@ const double DROP_RADIUS = 1.0; // Radius of droplet
 const double INITIAL_DROP_HEIGHT = 0.125; // Initial gap between drop and plate
 
 /* Plate definition */
-const double PLATE_WIDTH = 3.0; // Width of plate (horizontal direction)
+const double PLATE_WIDTH = 2.0; // Width of plate (horizontal direction)
 
 /* Plate ODE terms (only used when plate is coupled). Corresponds to 
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
@@ -33,8 +33,12 @@ const double GAMMA = 500.; // Elastic term
 
 /* Override: Constant acceleration. Use this to set the acceleration of the 
 plate to be constant (decoupling the plate motion from the droplet) */
-const int CONST_ACC = 1; // Set to 1 to specify a constant acceleration
-const double PLATE_ACC = 0.; // Constnat acceleration of the plate
+const int CONST_ACC = 0; // Set to 1 to specify a constant acceleration
+const double PLATE_ACC = 0.05; // Constnat acceleration of the plate
+
+/* Override: Imposed sinusoidal motion */
+const int IMPOSED = 1;
+const double IMPOSED_COEFF = 0.0025;
 
 /* Computational options. I.e. ones relating to the computational setup 
 and not related to the actual physics */
