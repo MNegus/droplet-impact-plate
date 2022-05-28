@@ -4,11 +4,20 @@ code_dir=$1
 dest_dir=$2
 
 
-for MAXLEVEL in 10 11 12 13 14
+for AXISYMMETRIC in 0 1 
 do
-    # Changes the parameters file
-    sed -i "/MAXLEVEL/c\const int MAXLEVEL = $MAXLEVEL; // Maximum refinement level" parameters.h
+    # Change the axisymmetric value in parameters file
+    sed -i "/#define AXISYMMETRIC/c\#define AXISYMMETRIC $AXISYMMETRIC" parameters.h
 
-    # Copies over the code 
-    ./code_copy.sh $code_dir $dest_dir max_level_$MAXLEVEL
+    # Make the respective directory
+    mkdir $dest_dir/axi_$AXISYMMETRIC
+    
+    for MAXLEVEL in 10 11 12 13 14
+    do
+        # Changes the parameters file
+        sed -i "/MAXLEVEL/c\const int MAXLEVEL = $MAXLEVEL; // Maximum refinement level" parameters.h
+
+        # Copies over the code 
+        ./code_copy.sh $code_dir $dest_dir/axi_$AXISYMMETRIC max_level_$MAXLEVEL
+    done
 done
