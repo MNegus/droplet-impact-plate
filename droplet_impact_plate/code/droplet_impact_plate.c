@@ -11,6 +11,9 @@
 #define mu(f)  (1./(clamp(f,0,1)*(1./mu1 - 1./mu2) + 1./mu2))
 
 #include "parameters.h" // Includes all defined parameters
+#if AXISYMMETRIC
+#include "axi.h" // Axisymmetric coordinates
+#endif
 #include "navier-stokes/centered.h" // To solve the Navier-Stokes
 #include "two-phase.h" // Implements two-phase flow
 #include "view.h" // Creating movies using bview
@@ -18,10 +21,6 @@
 #include "tag.h" // For removing small droplets
 #include "contact.h" // For imposing contact angle on the surface
 #include <omp.h> // For openMP parallel
-
-#if AXISYMMETRIC
-#include "axi.h" // Axisymmetric coordinates
-#endif
 
 /* Physical constants */
 double REYNOLDS; // Reynolds number of liquid
@@ -40,9 +39,9 @@ double MAX_TIME; // Maximum time to run the simulation for
 /* Global variables */
 double start_wall_time; // Time the simulation was started
 double end_wall_time; // Time the simulation finished
-int gfs_output_no = 1; // Records how many GFS files have been outputted
-int plate_output_no = 1; // Records how many plate data files there have been
-int interface_output_no = 1; // Records how many interface files there have been
+int gfs_output_no = 0; // Records how many GFS files have been outputted
+int plate_output_no = 0; // Records how many plate data files there have been
+int interface_output_no = 0; // Records how many interface files there have been
 double pinch_off_time = 0.; // Time pinch-off of the entrapped bubble occurs
 double drop_thresh = 1e-4; // Remove droplets threshold
 double bubble_area = 0.; // Area of entrapped bubble
@@ -270,9 +269,10 @@ event moving_plate (t += 1e-4) {
     s_previous = s_current;
     s_current = s_next; 
 
-    /* If CONST_ACC is set, then we override this and set the variables to their
-    pre-defined values */
+    
     if (CONST_ACC) {
+        /* If CONST_ACC is set, then we override this and set the variables to 
+        their pre-defined values */
         if (t < IMPACT_TIME) {
             d2s_dt2 = 0.;
             ds_dt = 0.;
@@ -281,6 +281,20 @@ event moving_plate (t += 1e-4) {
             d2s_dt2 = PLATE_ACC; // PLATE_ACC is the pre-defined constant acc.
             ds_dt = d2s_dt2 * (t - IMPACT_TIME);
             s_current = 0.5 * d2s_dt2 * (t - IMPACT_TIME) * (t - IMPACT_TIME);
+        }
+    } else if (IMPOSED) {
+        /* Else if IMPOSED is set, then we define the plate motion to be an 
+        imposed sinusoidal curve */
+        if (t < IMPACT_TIME) {
+            d2s_dt2 = 0.;
+            ds_dt = 0.;
+            s_current = 0.;
+        } else {
+            double tShift = t - IMPACT_TIME;
+            double k = 12.0;
+            d2s_dt2 = IMPOSED_COEFF * (2 + sq(k) * cos(k * tShift));
+            ds_dt = IMPOSED_COEFF * (2 * tShift + k * sin(k * tShift));
+            s_current = IMPOSED_COEFF * (1 - cos(k * tShift) + sq(tShift));
         }
     }
 
@@ -330,22 +344,37 @@ event small_droplet_removal (t += 1e-3) {
             pinch_off_time = t;
         }
     } else {
-        /* After the pinch off time, determine area of the entrapped bubble */
-        // Determine the tag of the entrapped bubble by finding the tag of the 
-        // cell 
-        int entrap_idx;
-        foreach_boundary(left) {
-            if (y < MIN_CELL_SIZE) {
-                entrap_idx = bubbles[];
-                break;
+        /* Determine area of entrapped bubble */
+
+        // Determine the tag of the entrapped bubble. After pinch-off, this will
+        // be somewhere along the bottom boundary. It's possible that the corner
+        // cell isn't contained within the bubble, so instead we find the 
+        // boundary cell with the smallest value of x that is a bubble (i.e. 
+        // bubbles[] > 0).
+
+        // We initialise the tag to be 0, which is the tag the
+        // bulk droplet will have, so that if the bubble is not found, the 
+        // resulting area will be huge and easy to identify that we're wrong.
+        int entrap_tag = 0; 
+
+        // Found minimum y value, initialised to be BOX_WIDTH 
+        double y_min = BOX_WIDTH; 
+
+        // Serial loop along left boundary as reduction operators are not 
+        // implemented in foreach_boundary loops
+        foreach_boundary(left, serial) {
+            if ((bubbles[] > 0) && (y < y_min)) {
+                // Update tag and the minimum x
+                entrap_tag = bubbles[];
+                y_min = y;
             }
         }
 
         // Determine the area of the tagged droplet
         bubble_area = 0.;
         foreach(reduction(+:bubble_area)) {
-            if (bubbles[] == entrap_idx) {
-                bubble_area += (1. - f[]) * Delta * Delta;
+            if (bubbles[] == entrap_tag) {
+                bubble_area += (1. - f[]) * dv();
             }
         }
 
