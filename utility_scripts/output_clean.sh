@@ -80,6 +80,17 @@ mkdir ${GFS_DIR}
 mv ${RAW_DATA_DIR}/*.gfs ${GFS_DIR}
 
 ################################################################################
+# Moves the interface files into a separate directory
+################################################################################
+
+# Makes a directory for the gfs files
+INTERFACE_DIR=${PARENT_DIR}/interfaces
+mkdir ${INTERFACE_DIR}
+
+# Moves all the gfs files from the raw_data direcotry into the movies directory
+mv ${RAW_DATA_DIR}/interface_*.txt ${INTERFACE_DIR}
+
+################################################################################
 # Cleans the plate output files
 ################################################################################
 # The raw data directory will contain a certain number of files called 
@@ -95,7 +106,7 @@ TIMESFILE=${CLEANED_DATA_DIR}/plate_outputs/times.txt
 > $TIMESFILE
 
 # Loops over all of the plate output files
-for (( filenum=1; filenum<=$NOFILES; filenum++))
+for (( filenum=0; filenum<$NOFILES; filenum++))
 do
     # Name of raw data file
     DATAFILE=${RAW_DATA_DIR}/plate_output_$filenum.txt
