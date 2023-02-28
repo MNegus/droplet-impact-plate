@@ -317,14 +317,14 @@ event acceleration (i++) {
 }
 
 
-event small_droplet_removal (t += 1e-3) { 
+event small_droplet_removal (t += 1e-4) { 
 /* Removes any small droplets or bubbles that have formed, that are smaller than
  a specific size. Uses the remove_droplets_region code to leave the area near 
  the point of impact alone in order to properly resolve the entrapped bubble */
 
     // Minimum diameter (in cells) a droplet/bubble has to be, else it will be 
     // removed
-    int drop_min_cell_width = 12;
+    int drop_min_cell_width = 36;
     int bubble_min_cell_width = 8;
 
     // Region to ignore
@@ -488,9 +488,20 @@ event output_interface (t += INTERFACE_OUTPUT_TIMESTEP) {
 event gfs_output (t += GFS_OUTPUT_TIMESTEP) {
 /* Saves a gfs file */
     if ((t >= START_OUTPUT_TIME) && (t <= END_OUTPUT_TIME)) {
+        // Output gfs file
         char gfs_filename[80];
         sprintf(gfs_filename, "gfs_output_%d.gfs", gfs_output_no);
         output_gfs(file = gfs_filename);
+
+        // Output fields
+        char field_filename[80];
+        sprintf(field_filename, "field_output_%d.txt", gfs_output_no);
+        FILE *field_file = fopen(field_filename, "w");
+
+        int N_output = (int) floor(pow(2, MAXLEVEL) * 2. / 6.);
+        output_field ({p,f,u}, field_file, N_output, box = {{0,0},{2.5,2.5}});
+
+        fclose(field_file);
 
         gfs_output_no++;
     }

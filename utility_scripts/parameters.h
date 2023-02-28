@@ -27,28 +27,28 @@ const double PLATE_WIDTH = 2.0; // Width of plate (horizontal direction)
 
 /* Plate ODE terms (only used when plate is coupled). Corresponds to 
 ALPHA s''(t) + BETA s'(t) + GAMMA s(t) = F(t) */
-const double ALPHA = 2.; // Mass term
-const double BETA = 0.; // Damping term
-const double GAMMA = 500.; // Elastic term
+const double ALPHA = 2.0; // Mass term
+const double BETA = 819.8; // Damping term
+const double GAMMA = 21000.0; // Elastic term
 
 /* Override: Constant acceleration. Use this to set the acceleration of the 
 plate to be constant (decoupling the plate motion from the droplet) */
-const int CONST_ACC = 0; // Set to 1 to specify a constant acceleration
-const double PLATE_ACC = 0.05; // Constnat acceleration of the plate
+const int CONST_ACC = 1; // Set to 1 to specify a constant acceleration
+const double PLATE_ACC = 0.0; // Constnat acceleration of the plate
 
 /* Override: Imposed sinusoidal motion */
-const int IMPOSED = 1;
-const double IMPOSED_COEFF = 0.0025;
+const int IMPOSED = 0;
+const double IMPOSED_COEFF = 0.;
 
 /* Computational options. I.e. ones relating to the computational setup 
 and not related to the actual physics */
 // General
-const double HARD_MAX_TIME = 0.8; // Hard maximum time (end time may be shorter)
+const double HARD_MAX_TIME = 0.41; // Hard maximum time (end time may be shorter)
 const double BOX_WIDTH = 6.0; // Width of the computational box
 const double FORCE_DELAY_TIME = 0.01; // Delay time before force is applied on plate
 // Refinement options
 const int MINLEVEL = 5; // Minimum refinement level 
-const int MAXLEVEL = 14; // Maximum refinement level
+const int MAXLEVEL = 13; // Maximum refinement level
 const int PLATE_REFINE_NO = 4; // Number of max refinement cells above plate
 const double DROP_REFINED_WIDTH = 0.04; // width of refined region around droplet
 // Output options
@@ -60,7 +60,7 @@ const double PLATE_OUTPUT_TIMESTEP = 1e-3; // Time between plate outputs
 const double LOG_OUTPUT_TIMESTEP = 1e-4; // Time between log outputs
 const double INTERFACE_OUTPUT_TIMESTEP = 1e-3; // Time between interface outputs
 // Removal options
-const double REMOVAL_DELAY = 0.02; // Time after pinch-off to start removal
+const double REMOVAL_DELAY = 0.005; // Time after pinch-off to start removal
 const int REMOVE_ENTRAPMENT = 0; // If 1, completely remove entrapped air
 // Peak detect options
 const int PEAK_DETECT = 1; // If 1, remove peaks in the force
